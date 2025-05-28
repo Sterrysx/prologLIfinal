@@ -191,7 +191,7 @@ Trigger search: assign concrete values to your FD variables according to a chose
    Vs = [1,3] ;
    Vs = [2,2] ;
    Vs = [3,1].
-````
+   ```
 
 • Always picks `X` before `Y`.
 
