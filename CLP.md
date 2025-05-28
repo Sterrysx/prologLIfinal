@@ -169,46 +169,141 @@ Force all variables in a list to take pairwise different values.
 
 ### 3.1 `labeling/2`
 
-**Purpose:**
-Trigger search: assign concrete values to FD variables in a specified order/strategy.
+**Purpose:**  
+Trigger search: assign concrete values to your FD variables according to a chosen strategy.
 
-**Examples & Explanations:**
+**Options categories:**  
+- **Variable‐selection:** which variable to label next  
+  (`leftmost`, `ff`, `ffc`, `min`, `max`)  
+- **Value‐order:** in what order to try values  
+  (`up`, `down`)  
+- **Branching:** how to split a variable’s domain into choices  
+  (`step`, `enum`, `bisect`)  
+- **Optimization:** order solutions by an expression  
+  (`min(Expr)`, `max(Expr)`)
 
-1. **Default search**
+#### 3.1.1 Variable‐selection strategies
 
+1. **leftmost** (the default)  
    ```prolog
-   ?- Vs = [X,Y], Vs ins 1..3, X #< Y,
-      labeling([], Vs).
-   Vs = [1,2] ;
+   ?- Vars = [X,Y], Vars ins 1..3, X+Y #=4,
+      labeling([leftmost], Vars).
    Vs = [1,3] ;
-   Vs = [2,3] ;
-   false.
-   ```
+   Vs = [2,2] ;
+   Vs = [3,1].
+````
 
-   • Finds all `(X,Y)` with `1≤X<Y≤3`.
+• Always picks `X` before `Y`.
 
-2. **First-fail heuristic**
-
-   ```prolog
-   ?- Vs = [A,B,C], Vs ins 1..5,
-      A+B+C #= 7,
-      labeling([ff], Vs).
-   ```
-
-   • Chooses the variable with the smallest domain next, often speeding up search.
-
-3. **Optimization**
+2. **ff** (“first‐fail”)
 
    ```prolog
-   ?- Vs = [S1,S2], Vs ins 0..10,
-      S1+S2 #= 10,
-      labeling([min(S1)], Vs).
-   Vs = [0,10] ;
-   Vs = [1,9] ;
-   …         % in ascending order of S1
+   ?- Vars = [X,Y], X ins 1..3, Y ins 1..1, X+Y #=4,
+      labeling([ff], Vars).
+   Y = 1,
+   X = 3.
    ```
 
-   • `min(S1)` directs the solver to generate solutions increasing in `S1`.
+   • Chooses `Y` first because its domain size (1) is smallest.
+
+3. **ffc** (first‐fail + constraint‐counting)
+
+   ```prolog
+   ?- Vars = [A,B,C], Vars ins 1..3,
+      A+B #=4, B+C #=5,
+      labeling([ffc], Vars).
+   A = 1,
+   B = 3,
+   C = 2.
+   ```
+
+   • Of the smallest‐domain variables, picks the one in most constraints (`B` here).
+
+4. **min(Var)**
+
+   ```prolog
+   ?- Vs = [X,Y], Vs ins 1..5, X+Y #=6,
+      labeling([min(X)], Vs).
+   Vs = [1,5] ;
+   Vs = [2,4] ;
+   Vs = [3,3] ;
+   Vs = [4,2] ;
+   Vs = [5,1].
+   ```
+
+   • Labels variables in order to **minimize** `X`.
+
+5. **max(Var)**
+
+   ```prolog
+   ?- Vs = [X,Y], Vs ins 1..5, X+Y #=6,
+      labeling([max(Y)], Vs).
+   Vs = [5,1] ;
+   Vs = [4,2] ;
+   Vs = [3,3] ;
+   Vs = [2,4] ;
+   Vs = [1,5].
+   ```
+
+   • Labels to **maximize** `Y`.
+
+#### 3.1.2 Value‐order
+
+1. **up** (default: ascending)
+
+   ```prolog
+   ?- Z ins 1..3, labeling([up], [Z]).
+   Z = 1 ;
+   Z = 2 ;
+   Z = 3.
+   ```
+
+2. **down** (descending)
+
+   ```prolog
+   ?- Z ins 1..3, labeling([down], [Z]).
+   Z = 3 ;
+   Z = 2 ;
+   Z = 1.
+   ```
+
+#### 3.1.3 Branching strategy
+
+1. **step** (default)
+
+   ```prolog
+   ?- X in 1..3, Y in 1..3, X+Y #=4,
+      labeling([step], [X,Y]).
+   X = 1, Y = 3 ;
+   X = 2, Y = 2 ;
+   X = 3, Y = 1.
+   ```
+
+2. **enum** (enumerate all values)
+
+   ```prolog
+   ?- X in 1..3, Y #= X+1,
+      labeling([enum], [X,Y]).
+   X = 1, Y = 2 ;
+   X = 2, Y = 3 ;
+   X = 3, Y = 4.
+   ```
+
+3. **bisect** (binary‐split domains)
+
+   ```prolog
+   ?- X in 1..8, labeling([bisect], [X]).
+   X = 4 ;
+   X = 2 ;
+   X = 6 ;
+   X = 1 ;
+   X = 3 ;
+   X = 5 ;
+   X = 7 ;
+   X = 8.
+   ```
+
+   • Splits 1..8 at midpoint (4), then recursively bisects each subinterval.
 
 ---
 
