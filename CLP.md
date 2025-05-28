@@ -1,4 +1,3 @@
-````markdown
 # CLP(FD) Quick-Reference Cheat Sheet
 
 _All CLP(FD) exercises follow this 4-step strategy:_
@@ -22,7 +21,7 @@ Generate or inspect the length of a list—often used to create a list of fresh 
    ```prolog
    ?- length(Vars, 3).
    Vars = [_, _, _].
-````
+   ```
 
 • `Vars` becomes a list of three new Prolog variables.
 
@@ -308,5 +307,3 @@ Formatted output, similar to `printf` in C.
 
 ---
 
-```
-```
