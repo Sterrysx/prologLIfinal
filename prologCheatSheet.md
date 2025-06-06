@@ -72,12 +72,6 @@ A comprehensive reference for Prolog concepts—from basic syntax through advanc
        3\.8.18. [Sublist Check (Contiguous)](#sublist-check-contiguous)  
        3\.8.19. [Permutations of a List](#permutations-of-a-list)  
        3\.8.20. [Zip Three Lists](#zip-three-lists)  
-   3\.9. [Creating Infinite and Limited Lists](#creating-infinite-and-limited-lists)  
-       3\.9.1. [Finite Arithmetic Progressions](#finite-arithmetic-progressions)  
-           3\.9.1.A. [Fixed Number of Elements](#fixed-number-of-elements)  
-           3\.9.1.B. [Bounded by a Maximum Value](#bounded-by-a-maximum-value)  
-       3\.9.2. [Infinite Arithmetic Progressions (Generators)](#infinite-arithmetic-progressions-generators)  
-       3\.9.3. [Practical Scenarios and Combined Usage](#practical-scenarios-and-combined-usage)
 4. [Advanced Predicates](#advanced-predicates)  
    4\.1. [Using findall/3 for Collecting Solutions](#using-findall3-for-collecting-solutions)  
    4\.2. [SAT & Constraint Encodings](#sat--constraint-encodings)  
@@ -647,87 +641,104 @@ Below are the core predicates for list manipulation. Each predicate can work in 
 
 <a id="member2-and-memberchk2"></a>
 
-**Purpose:**  
+**Purpose:**
 Determines if an element is a member of a list or enumerates all elements.
 
 **Examples & Explanations:**
 
 1. **Check Membership (Element Known, List Known):**
 
-   ```
+   ```prolog
    ?- member(b, [a, b, c]).
-   
    ```
 
    *Explanation:*
-   * The query asks, "Is `b` in the list `[a,b,c]`?"
-   * Since `b` is present, it succeeds (returns `true`).
+
+   * The query asks, "Is `b` in the list `[a, b, c]`?"
+   * Since `b` is present, it succeeds (`true`).
+
 2. **Enumerate Members (Element Variable, List Known):**
 
-   ```
+   ```prolog
    ?- member(X, [a, b, c]).
-   
    ```
 
    *Explanation:*
-   * Prolog assigns `X` the value `a` first, then upon backtracking `b`, then `c`.
+
+   * Prolog assigns `X = a`, then on backtracking `X = b`, then `X = c`.
    * **Output:**
+
      * `X = a`
      * `X = b`
-     * `X = c`  
-       *Why:*  
+     * `X = c`
+       *Why:*
        Useful for generating all elements one by one.
+
 3. **Using with Duplicates:**
 
-   ```
+   ```prolog
    ?- member(a, [a, b, a, c]).
-   
    ```
 
    *Explanation:*
-   * Even though `a` appears twice, `member/2` will succeed immediately once it finds the first occurrence.
-   * Backtracking can reveal the second occurrence if needed.
+
+   * `a` appears twice, but `member/2` succeeds on the first occurrence.
+   * On backtracking, it can yield the second occurrence if needed.
+
 4. **Generating Lists (List Variable):**
 
-   ```
+   ```prolog
    ?- member(1, L).
-   
    ```
 
    *Explanation:*
-   * Here, `L` is a variable. Prolog tries to generate lists that contain `1` as some element.
-   * **Caution:** This can lead to infinite possibilities unless constrained by additional goals.
+
+   * Here, `L` is a variable. Prolog attempts to generate lists that contain `1`.
+   * **Caution:** This can lead to infinitely many solutions unless you constrain `L` further.
+
+5. **Not a Member (Using Negation):**
+
+   ```prolog
+   ?- \+ member(d, [a, b, c]).
+   ```
+
+   *Explanation:*
+
+   * The query asks, "Is `d` not in the list `[a, b, c]`?"
+   * Because `d` is absent, `\+ member(d, [a, b, c])` succeeds (`true`).
+   * If you tried `\+ member(b, [a, b, c])`, it would fail because `b` *is* a member.
 
 ---
 
 #### 3.3.2 `memberchk/2`
 
-**Purpose:**  
+**Purpose:**
 A deterministic version of `member/2` that stops after the first successful match.
 
 **Examples & Explanations:**
 
 1. **Check First Occurrence:**
 
-   ```
+   ```prolog
    ?- memberchk(b, [a, b, c, b]).
-   
    ```
 
    *Explanation:*
-   * Finds `b` and stops, without leaving a choice point for further backtracking.
-   * **Output:** Simply `true`.
+
+   * Finds `b` and stops immediately.
+   * **Output:** `true`.
+
 2. **Enumerating with Variable (Less Useful):**
 
-   ```
+   ```prolog
    ?- memberchk(X, [a, b, c]).
-   
    ```
 
    *Explanation:*
-   * `X` will be instantiated to `a` (the first element) and then stops.
-   * **Why:**  
-     Use `memberchk/2` when you only need to check for membership, not to list all possibilities.
+
+   * `X` is unified with `a` (the first element) and then stops.
+   * **Why:**
+     Use `memberchk/2` when you only need a yes/no answer about membership (no backtracking).
 
 ---
 
@@ -3074,149 +3085,6 @@ zip3([H1|T1], [H2|T2], [H3|T3], [[H1,H2,H3]|Rest]) :-
 
 ---
 
-#### 3.9 Creating Infinite and Limited Lists
-
-<a id="creating-infinite-and-limited-lists"></a>
-
-In Prolog, you can simulate infinite sequences using generator predicates that produce one element at a time on backtracking. For practical use, you often want to generate a finite (limited) list, either by specifying the number of elements or by constraining the range.
-
----
-
-##### 3.9.1 Finite Arithmetic Progressions
-
-###### A. Fixed Number of Elements
-
-<a id="fixed-number-of-elements"></a>
-
-This predicate generates a list with exactly **N** elements, starting from a given value and increasing by a fixed step.
-
-```
-% arithmetic_progression_n(+Start, +Step, +N, -List)
-arithmetic_progression_n(_, _, 0, []).
-arithmetic_progression_n(Start, Step, N, [Start|Rest]) :-
-    N > 0,
-    NewN is N - 1,
-    Next is Start + Step,
-    arithmetic_progression_n(Next, Step, NewN, Rest).
-```
-
-**Example 1:** Generate 5 numbers starting from 2 with a step of 3.
-
-```
-?- arithmetic_progression_n(2, 3, 5, List).
-% List = [2, 5, 8, 11, 14].
-```
-
----
-
-###### B. Bounded by a Maximum Value
-
-<a id="bounded-by-a-maximum-value"></a>
-
-This version builds the list until the next element would exceed a specified maximum.
-
-```
-% arithmetic_progression_between(+Start, +Step, +Max, -List)
-arithmetic_progression_between(Start, _Step, Max, []) :-
-    Start > Max.
-arithmetic_progression_between(Start, Step, Max, [Start|Rest]) :-
-    Start =< Max,
-    Next is Start + Step,
-    arithmetic_progression_between(Next, Step, Max, Rest).
-```
-
-**Example 2:** Generate all numbers from 2 up to 14 with a step of 3.
-
-```
-?- arithmetic_progression_between(2, 3, 14, List).
-% List = [2, 5, 8, 11, 14].
-```
-
----
-
-##### 3.9.2 Infinite Arithmetic Progressions (Generators)
-
-<a id="infinite-arithmetic-progressions-generators"></a>
-
-For simulating an infinite list, you can define a generator predicate that produces one element of the arithmetic progression per solution (via backtracking). Use these with care—the query won’t terminate unless you restrict it further.
-
-```
-% infinite_arithmetic(+Start, +Step, -Element)
-infinite_arithmetic(Start, _Step, Start).
-infinite_arithmetic(Start, Step, Element) :-
-    Next is Start + Step,
-    infinite_arithmetic(Next, Step, Element).
-```
-
-**Example 3:** Generate elements of an arithmetic sequence starting at 2 with step 3.
-
-```
-?- infinite_arithmetic(2, 3, X).
-% On backtracking: X = 2 ; X = 5 ; X = 8 ; X = 11 ; ...
-```
-
-*Tip:* Use conditions in your query (e.g., `X > 20, X < 30`) to limit the results when using an infinite generator.
-
----
-
-##### 3.9.3 Practical Scenarios and Combined Usage
-
-<a id="practical-scenarios-and-combined-usage"></a>
-
-###### Scenario 1: Check Membership in an Arithmetic Sequence
-
-You can generate a finite arithmetic sequence and then use the built-in `member/2` predicate to check if a particular value belongs to it.
-
-```
-?- arithmetic_progression_n(2, 3, 10, List), member(11, List).
-% List = [2,5,8,11,14,17,20,23,26,29],
-% Succeeds since 11 is in the list.
-```
-
-###### Scenario 2: Filtering Values from a Sequence
-
-Combine a generated arithmetic sequence with your filtering predicates. For example, filter the even numbers from a sequence.
-
-```
-% Define predicate to check even numbers.
-is_even(X) :- 0 is X mod 2.
-
-?- arithmetic_progression_between(2, 3, 30, List), filter(List, Evens, is_even).
-% List = [2,5,8,11,14,17,20,23,26,29],
-% Evens = [2,8,14,20,26].
-```
-
-###### Scenario 3: Using Sequences for Range Checks
-
-You can represent ranges with arithmetic progressions, especially when the step is not 1.
-
-```
-?- arithmetic_progression_between(10, 5, 50, List).
-% List = [10,15,20,25,30,35,40,45,50].
-```
-
-###### Scenario 4: Constraining an Infinite Generator
-
-Apply additional conditions to the infinite generator to retrieve only the values you need.
-
-```
-?- infinite_arithmetic(2, 3, X), X > 20, X < 30.
-% On backtracking, possible values: X = 23 ; X = 26.
-```
-
-###### Scenario 5: Using `between/3` for Unit Steps
-
-For consecutive integers (step = 1), Prolog’s built-in `between/3` predicate is very useful:
-
-```
-?- between(2, 10, X).
-% Generates X = 2, 3, 4, 5, 6, 7, 8, 9, 10.
-```
-
-*Note:* When the step is not 1, your arithmetic progression predicates are the way to go.
-
----
-
 ## 4. Advanced Predicates
 
 <a id="advanced-predicates"></a>
@@ -4359,3 +4227,1972 @@ X = [a,b,c,d].
 ?- push_front(d, [a,b,c], Y).
 Y = [d,a,b,c].
 ```
+
+
+
+---
+
+## 7. Generating Infinite and Finite Sequences
+
+In Prolog, you can simulate infinite sequences by writing *generator* predicates that yield one element per backtracking. For practical use you often want to collect just the first N elements into a list. Below are three common patterns—each showing:
+
+1. A generator predicate for an “infinite” sequence
+2. A wrapper predicate to collect the first **N** values into a list
+
+---
+
+### 7.1 Fibonacci Sequence
+
+**Purpose:**
+Generate the (conceptually infinite) sequence of Fibonacci numbers and collect the first N terms.
+
+```prolog
+% infinite_fib(-F)  
+%   Generator: on each backtrack, F unifies with the next Fibonacci number.
+infinite_fib(0).
+infinite_fib(1).
+infinite_fib(F) :-
+    infinite_fib(F1),
+    infinite_fib(F2),
+    F is F1 + F2,
+    F1 < F2.    % ensure we always move forward
+
+% fib_n(+N, -List)  
+%   Collects the first N Fibonacci numbers in List.
+fib_n(0, []) :- !.
+fib_n(N, [F|Fs]) :-
+    N > 0,
+    findall(X, infinite_fib(X), All),  % generates all in order
+    length(Prefix, N),
+    append(Prefix, _, All),             % take first N
+    prefix([F|Fs], Prefix).
+```
+
+**Example:**
+
+```prolog
+?- fib_n(7, L).
+%   L = [0, 1, 1, 2, 3, 5, 8].
+```
+
+---
+
+### 7.2 Empty Sublists
+
+**Purpose:**
+Generate an infinite stream of empty lists `[]` and collect the first N of them.
+
+```prolog
+% infinite_empty(-E)  
+%   Generator: E = [] on every backtrack.
+infinite_empty([]).
+infinite_empty(E) :-
+    infinite_empty(E).
+
+% empty_sublists(+N, -List)  
+%   Collect N copies of [] in List.
+empty_sublists(N, Ls) :-
+    findall(E, infinite_empty(E), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(Ls, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- empty_sublists(4, L).
+%   L = [[], [], [], []].
+```
+
+---
+
+### 7.3 Arithmetic Progression
+
+**Purpose:**
+Simulate an infinite arithmetic progression and collect the first N terms.
+
+```prolog
+% infinite_ap(+Start, +Step, -X)  
+%   Generator: X = Start, Start+Step, Start+2*Step, ...
+infinite_ap(Start, _, Start).
+infinite_ap(Start, Step, X) :-
+    Next is Start + Step,
+    infinite_ap(Next, Step, X).
+
+% ap_n(+Start, +Step, +N, -List)  
+%   Collects the first N terms of the progression.
+ap_n(Start, Step, N, List) :-
+    findall(X, infinite_ap(Start, Step, X), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- ap_n(2, 3, 5, L).
+%   L = [2, 5, 8, 11, 14].
+```
+
+---
+
+
+#### 7.4 Even Numbers
+
+**Purpose:**
+Generate the infinite sequence of even integers (0, 2, 4, …) and collect the first N of them.
+
+```prolog
+% infinite_even(-X)
+%   On each backtrack, X = 0, 2, 4, …
+infinite_even(0).
+infinite_even(X) :-
+    infinite_even(Y),
+    X is Y + 2.
+
+% even_n(+N, -List)
+%   Collects the first N even numbers into List.
+even_n(N, List) :-
+    findall(X, infinite_even(X), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- even_n(5, L).
+% L = [0, 2, 4, 6, 8].
+```
+
+---
+
+#### 7.5 Odd Numbers
+
+**Purpose:**
+Generate the infinite sequence of odd integers (1, 3, 5, …) and collect the first N of them.
+
+```prolog
+% infinite_odd(-X)
+%   On each backtrack, X = 1, 3, 5, …
+infinite_odd(1).
+infinite_odd(X) :-
+    infinite_odd(Y),
+    X is Y + 2.
+
+% odd_n(+N, -List)
+%   Collects the first N odd numbers into List.
+odd_n(N, List) :-
+    findall(X, infinite_odd(X), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- odd_n(5, L).
+% L = [1, 3, 5, 7, 9].
+```
+
+---
+
+#### 7.6 Powers of Two
+
+**Purpose:**
+Generate the infinite sequence 1, 2, 4, 8, … (powers of two) and collect the first N.
+
+```prolog
+% infinite_pow2(-X)
+%   On each backtrack, X = 1, 2, 4, 8, …
+infinite_pow2(1).
+infinite_pow2(X) :-
+    infinite_pow2(Y),
+    X is Y * 2.
+
+% pow2_n(+N, -List)
+%   Collects the first N powers of two into List.
+pow2_n(N, List) :-
+    findall(X, infinite_pow2(X), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- pow2_n(6, L).
+% L = [1, 2, 4, 8, 16, 32].
+```
+
+---
+
+#### 7.7 Squares of Integers
+
+**Purpose:**
+Generate the infinite sequence of square numbers (0, 1, 4, 9, …) and collect the first N.
+
+```prolog
+% infinite_nat(-N)  % helper: generate 0,1,2,3,…
+infinite_nat(0).
+infinite_nat(N) :-
+    infinite_nat(M),
+    N is M + 1.
+
+% infinite_square(-X)
+%   On each backtrack, X = N*N for N = 0,1,2,…
+infinite_square(X) :-
+    infinite_nat(N),
+    X is N * N.
+
+% square_n(+N, -List)
+%   Collects the first N squares into List.
+square_n(N, List) :-
+    findall(X, infinite_square(X), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- square_n(7, L).
+% L = [0, 1, 4, 9, 16, 25, 36].
+```
+
+---
+
+#### 7.8 Prime Numbers
+
+**Purpose:**
+Generate the infinite sequence of primes (2, 3, 5, 7, …) and collect the first N.
+
+```prolog
+% is_prime(+N)
+%   Succeeds if N is a prime.
+is_prime(2).
+is_prime(N) :-
+    N > 2,
+    Limit is floor(sqrt(N)),
+    \+ ( between(2, Limit, M),
+         0 is N mod M ).
+
+% infinite_prime(-P)
+%   On each backtrack, P = 2,3,5,7,…
+infinite_prime(P) :-
+    infinite_nat(N),
+    N >= 2,
+    is_prime(N),
+    P = N.
+
+% prime_n(+N, -List)
+%   Collects the first N primes into List.
+prime_n(N, List) :-
+    findall(P, infinite_prime(P), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- prime_n(10, L).
+% L = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29].
+```
+
+---
+
+#### 7.9 Triangular Numbers
+
+**Purpose:**
+Generate the infinite sequence of triangular numbers (0, 1, 3, 6, 10, …) where Tₙ = n(n+1)/2, and collect the first N.
+
+```prolog
+% infinite_triangular(-T)
+%   On each backtrack, T = N*(N+1)//2 for N = 0,1,2,…
+infinite_triangular(T) :-
+    infinite_nat(N),
+    T is N * (N + 1) // 2.
+
+% triangular_n(+N, -List)
+%   Collects the first N triangular numbers into List.
+triangular_n(N, List) :-
+    findall(T, infinite_triangular(T), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(List, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- triangular_n(8, L).
+% L = [0, 1, 3, 6, 10, 15, 21, 28].
+```
+
+---
+
+#### 7.10 Pythagorean Triples
+
+**Purpose:**
+Generate (X,Y,Z) with X²+Y²=Z² (X≤Y), an “infinite” stream of Pythagorean triples, and collect the first N.
+
+```prolog
+% infinite_pythag(-X,-Y,-Z)
+%   On each backtrack, yields next triple [X,Y,Z].
+infinite_pythag(X, Y, Z) :-
+    infinite_nat(X), X > 0,
+    infinite_nat(Y), Y >= X,
+    Z2 is X*X + Y*Y,
+    Zf is sqrt(Z2),
+    Z is round(Zf),
+    Zf =:= Z.
+
+% pythagorean_n(+N, -Triples)
+%   Collects the first N pythagorean triples as [ [X,Y,Z], … ].
+pythagorean_n(N, Triples) :-
+    findall([X,Y,Z], infinite_pythag(X,Y,Z), All),
+    length(Prefix, N),
+    append(Prefix, _, All),
+    prefix(Triples, Prefix).
+```
+
+**Example:**
+
+```prolog
+?- pythagorean_n(5, L).
+% L = [[3,4,5], [5,12,13], [6,8,10], [7,24,25], [8,15,17]].
+```
+
+---
+
+**Tips for Usage:**
+
+* **Backtracking generators** (`infinite_fib/1`, `infinite_empty/1`, `infinite_ap/3`) never terminate on their own; always wrap them with a limiting predicate (`findall/3` + `length/2` or a custom accumulator) to get a finite list.
+
+* If you don’t need the entire intermediate list, you can write a direct tail-recursive collector:
+
+  ```prolog
+  fib_n_acc(0, _, _, Acc, Acc) :- !.
+  fib_n_acc(N, A, B, Acc0, Acc) :-
+      N > 0,
+      append(Acc0, [A], Acc1),
+      N1 is N - 1,
+      Sum is A + B,
+      fib_n_acc(N1, B, Sum, Acc1, Acc).
+
+  fib_n(N, L) :-
+      fib_n_acc(N, 0, 1, [], L).
+  ```
+
+* Always include a **cut** (`!`) in your base case to prevent unwanted backtracking once you’ve collected N elements.
+
+
+
+
+---
+
+## 8. CLP(FD) Sequence Generators
+
+Below are several “generator” predicates written with CLP(FD).  Each follows the pattern:
+
+1. **Variables and Domains** – Declare your FD variables and their domains
+2. **Constraints** – Post the arithmetic or global constraints
+3. **Label** – Invoke `label/1` (or a labeling strategy) to search
+4. **Show the Results** – Print or return the computed sequence
+
+You’ll also see a few **helper predicates**—small CLP(FD) fragments you can reuse when defining new sequences.
+
+---
+
+### 8.1 Arithmetic Progression: `ap_clp/4`
+
+Generates a list of length *N* starting at `Start` and stepping by `Step`.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% ap_clp(+N, +Start, +Step, -V)
+ap_clp(N, Start, Step, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 0..sup,
+
+    %% 2-Constraints
+    V = [X1|_], X1 #= Start,
+    ap_steps(V, Step),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+ap_steps([_], _).
+ap_steps([X,Y|Xs], Step) :-
+    Y #= X + Step,
+    ap_steps([Y|Xs], Step).
+```
+
+**Example:**
+
+```prolog
+?- ap_clp(5, 2, 3, V).
+[2,5,8,11,14]
+```
+
+---
+
+### 8.2 Fibonacci Sequence: `fib_clp/2`
+
+Generates the first *N* Fibonacci numbers.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% fib_clp(+N, -V)
+fib_clp(N, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 0..sup,
+
+    %% 2-Constraints
+    (   N >= 1 -> nth1(1, V, F1), F1 #= 0 ; true ),
+    (   N >= 2 -> nth1(2, V, F2), F2 #= 1 ; true ),
+    fib_constr(3, V, N),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+fib_constr(I, _V, N) :- I > N, !.
+fib_constr(I, V, N) :-
+    I1 is I-1, I2 is I-2,
+    nth1(I,  V, Fi),
+    nth1(I1, V, Fim1),
+    nth1(I2, V, Fim2),
+    Fi #= Fim1 + Fim2,
+    Inext is I+1,
+    fib_constr(Inext, V, N).
+```
+
+**Example:**
+
+```prolog
+?- fib_clp(7, V).
+[0,1,1,2,3,5,8]
+```
+
+---
+
+### 8.3 Even Numbers: `even_clp/2`
+
+Generates the first *N* even non-negative integers.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% even_clp(+N, -V)
+even_clp(N, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 0..sup,
+
+    %% 2-Constraints
+    V = [X1|_], X1 #= 0,
+    even_steps(V),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+even_steps([_]).
+even_steps([X,Y|Xs]) :-
+    Y #= X + 2,
+    even_steps([Y|Xs]).
+```
+
+**Example:**
+
+```prolog
+?- even_clp(6, V).
+[0,2,4,6,8,10]
+```
+
+---
+
+### 8.4 Powers of Two: `pow2_clp/2`
+
+Generates 1, 2, 4, 8, … up to *N* terms.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% pow2_clp(+N, -V)
+pow2_clp(N, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 1..sup,
+
+    %% 2-Constraints
+    V = [X1|_], X1 #= 1,
+    pow2_steps(V),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+pow2_steps([_]).
+pow2_steps([X,Y|Ys]) :-
+    Y #= X * 2,
+    pow2_steps([Y|Ys]).
+```
+
+**Example:**
+
+```prolog
+?- pow2_clp(6, V).
+[1,2,4,8,16,32]
+```
+
+---
+
+### 8.5 Squares of Naturals: `square_clp/2`
+
+Generates 0², 1², 2², … for *N* terms.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% square_clp(+N, -V)
+square_clp(N, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 0..sup,
+
+    %% 2-Constraints
+    square_steps(0, V),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+square_steps(_, []).
+square_steps(I, [X|Xs]) :-
+    X #= I * I,
+    I1 #= I + 1,
+    square_steps(I1, Xs).
+```
+
+**Example:**
+
+```prolog
+?- square_clp(7, V).
+[0,1,4,9,16,25,36]
+```
+
+---
+
+### 8.6 Triangular Numbers: `triangular_clp/2`
+
+Generates the sequence Tₙ = n(n+1)/2 for *N* terms.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% triangular_clp(+N, -V)
+triangular_clp(N, V) :-
+    %% 1-Variables and Domains
+    length(V, N),
+    V ins 0..sup,
+
+    %% 2-Constraints
+    triangular_steps(1, V),
+
+    %% 3-Label
+    label(V),
+
+    %% 4-Show the results
+    writeln(V).
+
+triangular_steps(_, []).
+triangular_steps(I, [X|Xs]) :-
+    X #= I*(I+1)//2,
+    I1 is I + 1,
+    triangular_steps(I1, Xs).
+```
+
+**Example:**
+
+```prolog
+?- triangular_clp(8, V).
+[1,3,6,10,15,21,28,36]
+```
+
+---
+
+### 8.7 Prime Numbers (Simple Sieve): `prime_clp/2`
+
+Generates the first *N* primes via naïve trial‐division.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% prime_clp(+N, -P)
+prime_clp(N, P) :-
+    %% 1-Variables and Domains
+    length(P, N),
+    P ins 2..sup,
+
+    %% 2-Constraints
+    P = [P1|_], P1 #= 2,
+    prime_steps(P, 2),
+
+    %% 3-Label
+    label(P),
+
+    %% 4-Show the results
+    writeln(P).
+
+prime_steps([], _).
+prime_steps([X|Xs], Prev) :-
+    X #> Prev,
+    X mod 2 #\= 0,          % odd >2
+    primality(3, X),
+    prime_steps(Xs, X).
+
+primality(D, N) :- D*D #> N, !.
+primality(D, N) :-
+    N mod D #\= 0,
+    D2 #= D + 2,            % only test odd divisors
+    primality(D2, N).
+```
+
+**Example:**
+
+```prolog
+?- prime_clp(8, P).
+[2,3,5,7,11,13,17,19]
+```
+
+---
+
+### 8.8 Pythagorean Triples: `pyth_clp/2`
+
+Generates *N* triples \[X,Y,Z] with X²+Y²=Z² and X≤Y.
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% pyth_clp(+N, -Triples)
+pyth_clp(N, Triples) :-
+    %% 1-Variables and Domains
+    length(Triples, N),
+    append(Triples, Vars),      % flatten for labeling
+    Vars ins 1..sup,
+
+    %% 2-Constraints
+    maplist(pyth_constraint, Triples),
+
+    %% 3-Label
+    label(Vars),
+
+    %% 4-Show the results
+    writeln(Triples).
+
+pyth_constraint([X,Y,Z]) :-
+    X #=< Y,
+    X*X + Y*Y #= Z*Z.
+```
+
+**Example:**
+
+```prolog
+?- pyth_clp(5, T).
+[[3,4,5],[5,12,13],[6,8,10],[7,24,25],[8,15,17]]
+```
+
+---
+
+ Below are CLP(FD) adaptations of the **Arithmetic Progression** and **Fibonacci** generators so that, instead of “the first N terms,” they produce **all terms less than a given bound** `K` (here `K=25`).
+
+---
+
+### 8.9 Arithmetic Progression up to a Bound
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% ap_clp_upto(+Start, +Step, +K, -V)
+%%   V is the list of all values Start, Start+Step, Start+2*Step, … that are < K.
+
+ap_clp_upto(Start, Step, K, V) :-
+    % 1-Variables and Domains
+    MaxCount is ((K - Start) // Step) + 1,
+    length(V, MaxCount),
+    V ins Start..K-1,
+
+    % 2-Constraints
+    V = [X1|_],            X1 #= Start,
+    ap_steps(V, Step),
+    last(V, Last),         Last #< K,
+
+    % 3-Label
+    label(V),
+
+    % 4-Show the results
+    writeln(V).
+
+ap_steps([_], _).
+ap_steps([X,Y|Xs], Step) :-
+    Y #= X + Step,
+    ap_steps([Y|Xs], Step).
+```
+
+**Example:**
+
+```prolog
+?- ap_clp_upto(2, 3, 25, V).
+[2,5,8,11,14,17,20,23]
+```
+
+---
+
+### 8.10 Fibonacci up to a Bound
+
+```prolog
+:- use_module(library(clpfd)).
+
+%% compute_max_fib_index(+K, -N)
+%%   N is the largest index such that Fib(N) < K.
+compute_max_fib_index(K, N) :-
+    compute_max_fib_index(0, 1, 1, K, 2, N).
+
+compute_max_fib_index(_, F2, F2, _, I, I) :- F2 >= K, !.
+compute_max_fib_index(F1, F2, _, K, I0, N) :-
+    F2 < K,
+    F3 is F1 + F2,
+    I1 is I0 + 1,
+    compute_max_fib_index(F2, F3, F3, K, I1, N).
+
+%% fib_clp_upto(+K, -V)
+%%   V is the list of all Fibonacci numbers < K.
+fib_clp_upto(K, V) :-
+    % 1-Variables and Domains
+    compute_max_fib_index(K, N),
+    length(V, N),
+    V ins 0..K-1,
+
+    % 2-Constraints
+    ( N >= 1 -> nth1(1, V, F1), F1 #= 0 ; true ),
+    ( N >= 2 -> nth1(2, V, F2), F2 #= 1 ; true ),
+    fib_constr(3, V, N),
+    last(V, Last),            Last #< K,
+
+    % 3-Label
+    label(V),
+
+    % 4-Show the results
+    writeln(V).
+
+fib_constr(I, _V, N) :- I > N, !.
+fib_constr(I, V, N) :-
+    I1 is I-1, I2 is I-2,
+    nth1(I,  V, Fi),
+    nth1(I1, V, Fi1),
+    nth1(I2, V, Fi2),
+    Fi #= Fi1 + Fi2,
+    Inext is I + 1,
+    fib_constr(Inext, V, N).
+```
+
+**Example:**
+
+```prolog
+?- fib_clp_upto(25, V).
+[0,1,1,2,3,5,8,13,21]
+```
+
+---
+
+With these two predicates you no longer fix the **number** of terms in advance, but instead compute how many will fit under the threshold `K`, impose `Last #< K`, and let CLP(FD) fill in the rest.
+
+
+Below are the same ten undirected‐graph predicates, each with a more detailed description and **three usage examples** illustrating different scenarios.
+
+---
+
+## 9 Graph Predicates
+
+### 9.1 Undirected Graph Predicates
+
+We assume an undirected graph is represented as:
+
+```prolog
+graph(Vertices, Edges).
+```
+
+where `Vertices` is a list of distinct vertex IDs, and `Edges` is a list of unordered pairs `[X,Y]` (meaning an undirected edge between `X` and `Y`).
+
+#### 9.1.1 `edge/3`
+
+```prolog
+%% edge(+X, +Y, +Edges) is semidet.
+%% True if there is an undirected edge between X and Y in Edges.
+edge(X, Y, Edges) :-
+    (   member([X,Y], Edges)
+    ;   member([Y,X], Edges)
+    ).
+```
+
+**Description:**
+Checks whether vertices `X` and `Y` are directly connected by an edge in `Edges`. Because the graph is undirected, either `[X,Y]` or `[Y,X]` counts.
+
+**Examples:**
+
+1. **Simple “exists” check (order matches stored edge):**
+
+   ```prolog
+   ?- edge(1, 2, [[1,2],[2,3],[3,4]]).
+   true.
+   ```
+
+   *Explanation:*
+   The list of edges contains `[1,2]`, so `edge(1,2,…)` succeeds.
+
+2. **“Reverse” order check (edge stored as `[Y,X]`):**
+
+   ```prolog
+   ?- edge(3, 2, [[1,2],[2,3],[3,4]]).
+   true.
+   ```
+
+   *Explanation:*
+   The pair `[2,3]` is in `Edges`; since the graph is undirected, `edge(3,2,…)` also succeeds.
+
+3. **No edge present:**
+
+   ```prolog
+   ?- edge(1, 4, [[1,2],[2,3],[3,4]]).
+   false.
+   ```
+
+   *Explanation:*
+   Neither `[1,4]` nor `[4,1]` appears in the edge list, so it fails.
+
+---
+
+#### 9.1.2 `adjacent/3`
+
+```prolog
+%% adjacent(+X, -Y, +Edges) is nondet.
+%% True for each Y that is a neighbor of X in Edges.
+adjacent(X, Y, Edges) :-
+    edge(X, Y, Edges).
+```
+
+**Description:**
+Nondeterministically enumerates every direct neighbor `Y` of vertex `X`. Each time you backtrack, you get another `Y`.
+
+**Examples:**
+
+1. **Enumerate all neighbors:**
+
+   ```prolog
+   ?- adjacent(2, N, [[1,2],[2,3],[2,4],[4,5]]).
+   N = 1 ;
+   N = 3 ;
+   N = 4 ;
+   false.
+   ```
+
+   *Explanation:*
+   On backtracking, Prolog reports `N = 1`, then `3`, then `4`.
+
+2. **Use `findall/3` to collect neighbors at once:**
+
+   ```prolog
+   ?- findall(N, adjacent(3, N, [[2,3],[3,4],[1,3]]), Ns).
+   Ns = [2,4,1].
+   ```
+
+   *Explanation:*
+   `findall/3` gathers every solution for `N`. Order corresponds to appearance of edges.
+
+3. **No neighbors (fails immediately):**
+
+   ```prolog
+   ?- adjacent(5, N, [[1,2],[2,3],[3,4]]).
+   false.
+   ```
+
+   *Explanation:*
+   Vertex `5` does not appear in any edge, so `adjacent(5,…)` has no solutions.
+
+---
+
+#### 9.1.3 `neighbors/3`
+
+```prolog
+%% neighbors(+X, +Edges, -List) is det.
+%% List is the (sorted, duplicate-free) set of all neighbors of X in Edges.
+neighbors(X, Edges, Neighs) :-
+    findall(Y, adjacent(X, Y, Edges), Ys),
+    sort(Ys, Neighs).
+```
+
+**Description:**
+Collects every neighbor of `X` into a sorted list without duplicates. Useful for quickly seeing all vertices that share an edge with `X`.
+
+**Examples:**
+
+1. **Typical case (some duplicates in raw edges):**
+
+   ```prolog
+   ?- neighbors(3, [[1,3],[3,2],[3,1],[3,4],[2,3]], Neighs).
+   Neighs = [1,2,4].
+   ```
+
+   *Explanation:*
+   Although edges `[1,3]` and `[3,1]` both appear, `sort/2` removes duplicates and orders them.
+
+2. **Isolated vertex returns empty list:**
+
+   ```prolog
+   ?- neighbors(5, [[1,2],[2,3],[3,4]], Neighs).
+   Neighs = [].
+   ```
+
+   *Explanation:*
+   No edges involve `5`, so its neighbor list is empty.
+
+3. **Single‐edge neighbor:**
+
+   ```prolog
+   ?- neighbors(4, [[3,4]], N).
+   N = [3].
+   ```
+
+   *Explanation:*
+   Vertex `4` has exactly one neighbor, `3`.
+
+---
+
+#### 9.1.4 `degree/3`
+
+```prolog
+%% degree(+X, +Edges, -D) is det.
+%% D is the number of neighbors (degree) of vertex X in Edges.
+degree(X, Edges, D) :-
+    neighbors(X, Edges, Neighs),
+    length(Neighs, D).
+```
+
+**Description:**
+Computes the “degree” of vertex `X`—i.e., how many edges incident on `X`. It uses `neighbors/3` internally.
+
+**Examples:**
+
+1. **Vertex with multiple neighbors:**
+
+   ```prolog
+   ?- degree(2, [[1,2],[2,3],[2,4],[4,2]], D).
+   D = 3.
+   ```
+
+   *Explanation:*
+   Unique neighbors of `2` are `[1,3,4]` (even though `[4,2]` duplicates `[2,4]`).
+
+2. **Leaf (degree = 1):**
+
+   ```prolog
+   ?- degree(5, [[5,6],[1,2]], D).
+   D = 1.
+   ```
+
+   *Explanation:*
+   Only edge touching `5` is `[5,6]`.
+
+3. **Isolated vertex (degree = 0):**
+
+   ```prolog
+   ?- degree(7, [[1,2],[2,3],[3,4]], D).
+   D = 0.
+   ```
+
+   *Explanation:*
+   Vertex `7` does not appear in any edge.
+
+---
+
+#### 9.1.5 `simple_path/5`
+
+```prolog
+%% simple_path(+Start, +Goal, +Edges, +Visited, -Path) is nondet.
+%% True if Path is a simple (acyclic) path [Start, …, Goal] in Edges,
+%% avoiding any vertex in Visited.  Visited accumulates as we go.
+simple_path(Goal, Goal, _Edges, _Visited, [Goal]) :- !.
+simple_path(X, Goal, Edges, Visited, [X|Rest]) :-
+    \+ member(X, Visited),
+    adjacent(X, Next, Edges),
+    \+ member(Next, Visited),
+    simple_path(Next, Goal, Edges, [X|Visited], Rest).
+```
+
+**Description:**
+Finds any path from `Start` to `Goal` that does not revisit a vertex. Each solution (on backtracking) yields a different simple path. Call initially with `Visited = []`.
+
+**Examples:**
+
+1. **Two different simple paths:**
+
+   ```prolog
+   ?- simple_path(1,5, [[1,2],[2,3],[3,5],[1,4],[4,5]], [], P).
+   P = [1, 2, 3, 5] ;
+   P = [1, 4, 5] ;
+   false.
+   ```
+
+   *Explanation:*
+   Both `[1,2,3,5]` and `[1,4,5]` are valid simple paths from `1` to `5`.
+
+2. **No path exists:**
+
+   ```prolog
+   ?- simple_path(a, d, [[a,b],[b,c]], [], P).
+   false.
+   ```
+
+   *Explanation:*
+   There is no way to reach `d` from `a`; it fails immediately.
+
+3. **Longer graph, multiple routes:**
+
+   ```prolog
+   ?- GraphEdges = [[1,2],[2,3],[3,4],[2,5],[5,4]],
+      simple_path(1,4, GraphEdges, [], P).
+   P = [1, 2, 3, 4] ;
+   P = [1, 2, 5, 4] ;
+   false.
+   ```
+
+   *Explanation:*
+   Two simple routes: `1→2→3→4` and `1→2→5→4`.
+
+---
+
+#### 9.1.6 `path_length/5`
+
+```prolog
+%% path_length(+X, +Y, +Edges, +Visited, -Len) is nondet.
+%% Len is the number of edges in a simple path from X to Y,
+%% each discovered via `simple_path/5`. Call with Visited = [] initially.
+path_length(X, Y, Edges, Visited, Len) :-
+    simple_path(X, Y, Edges, Visited, Path),
+    length(Path, L),     % L is number of vertices
+    Len is L - 1.        % convert to number of edges
+```
+
+**Description:**
+Chaque solution gives a different path, so different lengths on backtracking. If you only want the shortest, you can collect all and take the minimum.
+
+**Examples:**
+
+1. **Enumerate all path lengths:**
+
+   ```prolog
+   ?- path_length(1,5, [[1,2],[2,3],[3,5],[1,4],[4,5]], [], L).
+   L = 3 ;    % via [1,2,3,5]
+   L = 2 ;    % via [1,4,5]
+   false.
+   ```
+
+   *Explanation:*
+   Two lengths: 3 edges and 2 edges.
+
+2. **Single trivial path (start = goal):**
+
+   ```prolog
+   ?- path_length(v, v, [[v,w]], [], L).
+   L = 0.
+   ```
+
+   *Explanation:*
+   Calling `simple_path(v,v,…)` yields `[v]`, so `Len = 0`.
+
+3. **No path:**
+
+   ```prolog
+   ?- path_length(a, d, [[a,b],[c,d]], [], L).
+   false.
+   ```
+
+   *Explanation:*
+   `simple_path/5` fails, so `path_length/5` fails.
+
+---
+
+#### 9.1.7 `connected/2`
+
+```prolog
+%% connected(+Vertices, +Edges) is semidet.
+%% True if every vertex in Vertices belongs to a single connected component.
+connected([], _).
+connected([Start|Rest], Edges) :-
+    reachable([Start], Edges, ReachAll),
+    sort(ReachAll, Rsorted),
+    sort([Start|Rest], AllSorted),
+    Rsorted == AllSorted.
+
+%% reachable(+Frontier, +Edges, -AllReached)
+%% Gathers all vertices reachable (via any number of edges) from Frontier.
+reachable([], _Edges, []).
+reachable([V|Vs], Edges, Reachable) :-
+    reachable(Vs, Edges, R1),
+    (   member(V, R1)
+    ->  Reachable = R1
+    ;   neighbors(V, Edges, Neighs),
+        append(Neighs, R1, Temp),
+        Reachable = [V|Temp]
+    ).
+```
+
+**Description:**
+Performs a graph traversal (similar to BFS/DFS) from one starting vertex. If the set of all reachable vertices matches the full `Vertices` list, the graph is connected.
+
+**Examples:**
+
+1. **Connected graph (chain):**
+
+   ```prolog
+   ?- connected([1,2,3,4], [[1,2],[2,3],[3,4]]).
+   true.
+   ```
+
+   *Explanation:*
+   All vertices 1–4 are in a single component.
+
+2. **Disconnected graph:**
+
+   ```prolog
+   ?- connected([1,2,3,4], [[1,2],[3,4]]).
+   false.
+   ```
+
+   *Explanation:*
+   The component `{1,2}` is separate from `{3,4}`.
+
+3. **Singleton or empty:**
+
+   ```prolog
+   ?- connected([x], []).
+   true.
+
+   ?- connected([], []).
+   true.
+   ```
+
+   *Explanation:*
+   A single vertex or no vertices is trivially connected.
+
+---
+
+#### 9.1.8 `component/3`
+
+```prolog
+%% component(+X, +Edges, -Comp) is det.
+%% Comp is the (sorted, duplicate-free) set of vertices reachable from X.
+component(X, Edges, Comp) :-
+    reachable([X], Edges, R),
+    sort(R, Comp).
+```
+
+**Description:**
+Returns the entire connected component in which `X` lies, by reusing `reachable/3`.
+
+**Examples:**
+
+1. **Component of a vertex in a small graph:**
+
+   ```prolog
+   ?- component(2, [[1,2],[2,3],[3,4],[5,6]], C).
+   C = [1,2,3,4].
+   ```
+
+   *Explanation:*
+   From `2` you can reach `1,3,4` but not `5` or `6`.
+
+2. **Isolated vertex yields singleton:**
+
+   ```prolog
+   ?- component(z, [[a,b],[b,c]], C).
+   C = [z].
+   ```
+
+   *Explanation:*
+   `z` is not in any edge, so `reachable([z],…)` returns `[z]`.
+
+3. **Another component in the same graph:**
+
+   ```prolog
+   ?- component(5, [[1,2],[3,4],[5,6],[6,7]], C).
+   C = [5,6,7].
+   ```
+
+   *Explanation:*
+   From `5` you visit `6`, then `7`.
+
+---
+
+#### 9.1.9 `has_cycle/2`
+
+```prolog
+%% has_cycle(+Vertices, +Edges) is semidet.
+%% True if there exists at least one simple cycle in the graph.
+has_cycle(Vertices, Edges) :-
+    member(V, Vertices),
+    cycle_from(V, V, Edges, [], _Cycle).
+
+%% cycle_from(+Start, +Curr, +Edges, +Visited, -Cycle)
+%% Finds a simple cycle that begins and ends at Start (length ≥ 3).
+cycle_from(Start, Curr, Edges, Visited, [Start,Curr]) :-
+    adjacent(Curr, Next, Edges),
+    Next == Start,
+    \+ member(Next, Visited),
+    !.  % Found a 2-edge return; minimal cycle length is 2 here, but we want ≥3?
+cycle_from(Start, Curr, Edges, Visited, [Curr|Rest]) :-
+    \+ member(Curr, Visited),
+    adjacent(Curr, Next, Edges),
+    Next \= Start,
+    cycle_from(Start, Next, Edges, [Curr|Visited], Rest).
+```
+
+**Description:**
+Searches for any closed loop (cycle) of length ≥ 3 in the undirected graph. It picks each vertex `V` and attempts to walk until it returns to `V` without revisiting other nodes. On success, it produces one example cycle; otherwise fails.
+
+**Examples:**
+
+1. **Graph with a simple triangle:**
+
+   ```prolog
+   ?- has_cycle([1,2,3], [[1,2],[2,3],[3,1]]).
+   true.
+   ```
+
+   *Explanation:*
+   Triangle cycle exists: 1→2→3→1.
+
+2. **Graph with no cycles (tree):**
+
+   ```prolog
+   ?- has_cycle([a,b,c,d], [[a,b],[b,c],[c,d]]).
+   false.
+   ```
+
+   *Explanation:*
+   This is a path of length 3; no way to return to the start.
+
+3. **More complex graph, cycle of length 4:**
+
+   ```prolog
+   ?- has_cycle([1,2,3,4,5], [[1,2],[2,3],[3,4],[4,1],[3,5]]).
+   true.
+   ```
+
+   *Explanation:*
+   One cycle is 1→2→3→4→1. The presence of `[3,5]` doesn’t matter.
+
+---
+
+#### 9.1.10 `shortest_path/5`
+
+```prolog
+%% shortest_path(+Start, +Goal, +Edges, -Path, -Dist) is semidet.
+%% Finds a shortest simple path (fewest edges) from Start to Goal.
+%% Path is a list of vertices [Start,…,Goal]; Dist = number of edges.
+shortest_path(Start, Goal, Edges, Path, Dist) :-
+    bfs([[Start,[Start]]], Goal, Edges, [Start], PathRev),
+    reverse(PathRev, Path),
+    length(Path, L), Dist is L - 1.
+
+%% bfs(+Queue, +Goal, +Edges, +Visited, -ResultPath)
+bfs([[Goal, Path]|_], Goal, _Edges, _Visited, Path).
+bfs([[Curr, PathSoFar]|Queue], Goal, Edges, Visited, Result) :-
+    Curr \= Goal,
+    findall(
+      [Next, [Next|PathSoFar]],
+      ( adjacent(Curr, Next, Edges),
+        \+ member(Next, Visited)
+      ),
+      NextPairs
+    ),
+    extract_vertices(NextPairs, NewVs),
+    append(Visited, NewVs, Visited2),
+    append(Queue, NextPairs, NewQueue),
+    bfs(NewQueue, Goal, Edges, Visited2, Result).
+
+extract_vertices([], []).
+extract_vertices([[V,_]|Rest], [V|Vs]) :-
+    extract_vertices(Rest, Vs).
+```
+
+**Description:**
+Uses a breadth‐first search (BFS) approach to guarantee that the first time we reach `Goal`, we have done so by the shortest number of edges. The queue holds pairs `[CurrentVertex, PathSoFar]`. When `Goal` appears, `PathSoFar` (reversed) is the shortest path.
+
+**Examples:**
+
+1. **Unique shortest path:**
+
+   ```prolog
+   ?- shortest_path(1, 5, [[1,2],[2,3],[3,5],[1,4],[4,5]], P, D).
+   P = [1,4,5],
+   D = 2.
+   ```
+
+   *Explanation:*
+   Although `1→2→3→5` also reaches 5, it has length 3 edges; the BFS finds `1→4→5` (2 edges) first.
+
+2. **Multiple equal‐length choices (reports one):**
+
+   ```prolog
+   ?- shortest_path(a, d, [[a,b],[b,d],[a,c],[c,d]], P, D).
+   P = [a,b,d],
+   D = 2.
+
+   % On backtracking we still get the same, because BFS never leaves a choice point 
+   % once the goal is found.
+   ```
+
+   *Explanation:*
+   There are two paths of length 2 (`a→b→d` and `a→c→d`), but BFS enqueues `[a,b]` before `[a,c]`, so it finds `a→b→d` first and stops.
+
+3. **Goal unreachable:**
+
+   ```prolog
+   ?- shortest_path(x, y, [[x,z],[z,w]], P, D).
+   false.
+   ```
+
+   *Explanation:*
+   No sequence of edges leads from `x` to `y`, so it fails.
+
+---
+
+### 9.2 Directed Graphs
+
+For a directed graph, each edge is an **ordered** pair `[U,V]` meaning there is an arc from `U` to `V`. We will mirror the ten predicates from **9.1** but interpret edges as one‐way.
+
+---
+
+#### 9.2.1 `edge_dir/3`
+
+```prolog
+%% edge_dir(+U, +V, +Arcs) is semidet.
+%% True if there is a directed edge (arc) from U to V in the list Arcs.
+edge_dir(U, V, Arcs) :-
+    member([U, V], Arcs).
+```
+
+**Description:**
+Succeeds exactly when the ordered pair `[U,V]` appears in `Arcs`.  Unlike the undirected `edge/3`, there is no `[V,U]` alternative.
+
+**Examples:**
+
+1. **Arc exists in forward direction:**
+
+   ```prolog
+   ?- edge_dir(a, b, [[a,b],[b,c],[c,a]]).
+   true.
+   ```
+
+   *Explanation:*
+   `[a,b]` is present exactly as given.
+
+2. **Reverse does not count:**
+
+   ```prolog
+   ?- edge_dir(b, a, [[a,b],[b,c],[c,a]]).
+   false.
+   ```
+
+   *Explanation:*
+   Even though `a→b` is in the graph, there is no `b→a` arc.
+
+3. **No such arc:**
+
+   ```prolog
+   ?- edge_dir(x, y, [[a,b],[b,c]]).
+   false.
+   ```
+
+   *Explanation:*
+   That ordered pair does not appear.
+
+---
+
+#### 9.2.2 `adjacent_dir/3`
+
+```prolog
+%% adjacent_dir(+U, -V, +Arcs) is nondet.
+%% On backtracking, V is each vertex such that there is an arc U→V in Arcs.
+adjacent_dir(U, V, Arcs) :-
+    edge_dir(U, V, Arcs).
+```
+
+**Description:**
+Enumerates all *successors* `V` of a given vertex `U`.  Each backtracking step yields a different `V`.
+
+**Examples:**
+
+1. **Multiple successors:**
+
+   ```prolog
+   ?- adjacent_dir(p, Q, [[p,q],[p,r],[x,p],[q,p]]).
+   Q = q ;
+   Q = r ;
+   false.
+   ```
+
+   *Explanation:*
+   Only `[p,q]` and `[p,r]` count because the graph is directed; `[x,p]` and `[q,p]` are incoming arcs, not successors of `p`.
+
+2. **Single successor:**
+
+   ```prolog
+   ?- adjacent_dir(3, N, [[1,3],[3,2],[3,4]]).
+   N = 2 ;
+   N = 4 ;
+   false.
+   ```
+
+   *Explanation:*
+   There are two outgoing arcs from `3`: `[3,2]` and `[3,4]`.
+
+3. **No outgoing arcs:**
+
+   ```prolog
+   ?- adjacent_dir(a, V, [[b,c],[c,d]]).
+   false.
+   ```
+
+   *Explanation:*
+   Vertex `a` has no outgoing arcs in the list.
+
+---
+
+#### 9.2.3 `neighbors_out/3`
+
+```prolog
+%% neighbors_out(+U, +Arcs, -List) is det.
+%% List is the sorted set of all successors of U (no duplicates).
+neighbors_out(U, Arcs, Ns) :-
+    findall(V, adjacent_dir(U, V, Arcs), Vs),
+    sort(Vs, Ns).
+```
+
+**Description:**
+Collects every vertex `V` for which there is an arc `U→V`.  Results are sorted and duplicate‐free.
+
+**Examples:**
+
+1. **Typical case with duplicates in Arcs:**
+
+   ```prolog
+   ?- neighbors_out(x, [[x,y],[x,z],[x,y],[w,x]], Ns).
+   Ns = [y,z].
+   ```
+
+   *Explanation:*
+   Even though `[x,y]` appears twice, `sort/2` removes duplicates.
+
+2. **No outgoing arcs:**
+
+   ```prolog
+   ?- neighbors_out(5, [[1,2],[2,3],[3,4]], Ns).
+   Ns = [].
+   ```
+
+   *Explanation:*
+   `5` is not the source of any arc.
+
+3. **Single successor:**
+
+   ```prolog
+   ?- neighbors_out(node, [[node,foo],[bar,node]], Ns).
+   Ns = [foo].
+   ```
+
+   *Explanation:*
+   Only `[node,foo]` counts; `[bar,node]` is incoming and ignored.
+
+---
+
+#### 9.2.4 `out_degree/3`
+
+```prolog
+%% out_degree(+U, +Arcs, -D) is det.
+%% D is the number of outgoing arcs from vertex U.
+out_degree(U, Arcs, D) :-
+    neighbors_out(U, Arcs, Ns),
+    length(Ns, D).
+```
+
+**Description:**
+Computes how many arcs leave `U`.  Equivalent to the length of the successor list.
+
+**Examples:**
+
+1. **Multiple outgoing:**
+
+   ```prolog
+   ?- out_degree(a, [[a,b],[a,c],[c,a],[a,b]], D).
+   D = 2.
+   ```
+
+   *Explanation:*
+   Unique successors of `a` are `[b,c]`; duplicates are removed.
+
+2. **Zero outgoing:**
+
+   ```prolog
+   ?- out_degree(z, [[x,y],[y,z]], D).
+   D = 0.
+   ```
+
+   *Explanation:*
+   No `[z, _]` arcs, so out‐degree is 0.
+
+3. **Single outgoing:**
+
+   ```prolog
+   ?- out_degree(m, [[m,n],[p,m]], D).
+   D = 1.
+   ```
+
+   *Explanation:*
+   Only `[m,n]` counts; `[p,m]` is incoming.
+
+---
+
+#### 9.2.5 `simple_path_dir/5`
+
+```prolog
+%% simple_path_dir(+Start, +Goal, +Arcs, +Visited, -Path) is nondet.
+%% Path is a simple directed path from Start to Goal: [Start,…,Goal],
+%% never revisiting any vertex (except possibly if Start = Goal, trivial).
+simple_path_dir(Goal, Goal, _Arcs, _Visited, [Goal]) :- !.
+simple_path_dir(U, Goal, Arcs, Visited, [U|Rest]) :-
+    \+ member(U, Visited),
+    adjacent_dir(U, Next, Arcs),
+    \+ member(Next, Visited),
+    simple_path_dir(Next, Goal, Arcs, [U|Visited], Rest).
+```
+
+**Description:**
+Finds an acyclic (simple) directed path following only the direction of arcs.  Each solution is one such path; on backtracking, Prolog will attempt alternative routes.
+
+**Examples:**
+
+1. **Two distinct directed paths:**
+
+   ```prolog
+   ?- Arcs = [[a,b],[b,c],[a,d],[d,c]],
+      simple_path_dir(a, c, Arcs, [], P).
+   P = [a,b,c] ;
+   P = [a,d,c] ;
+   false.
+   ```
+
+   *Explanation:*
+   Both `a→b→c` and `a→d→c` respect arc direction.
+
+2. **No directed path due to breaking direction:**
+
+   ```prolog
+   ?- simple_path_dir(1, 4, [[1,2],[3,2],[2,3]], [], P).
+   false.
+   ```
+
+   *Explanation:*
+   Although there is an undirected connection 1–2–3–2–… never reaches `4`, and direction prevents any path to `4`.
+
+3. **Trivial path if Start = Goal:**
+
+   ```prolog
+   ?- simple_path_dir(x, x, [[x,y],[y,z]], [], P).
+   P = [x].
+   ```
+
+   *Explanation:*
+   A zero‐length path is allowed: `[x]`.
+
+---
+
+#### 9.2.6 `path_length_dir/5`
+
+```prolog
+%% path_length_dir(+U, +V, +Arcs, +Visited, -Len) is nondet.
+%% Len is the number of arcs in a simple directed path from U to V.
+path_length_dir(U, V, Arcs, Visited, Len) :-
+    simple_path_dir(U, V, Arcs, Visited, Path),
+    length(Path, L),          % L = number of vertices in the path
+    Len is L - 1.             % number of arcs = vertices - 1
+```
+
+**Description:**
+Every solution yields a different directed path (of possibly different lengths).  You can collect or compare lengths.
+
+**Examples:**
+
+1. **Enumerate two lengths:**
+
+   ```prolog
+   ?- Arcs = [[s,a],[a,b],[b,t],[s,c],[c,t]],
+      path_length_dir(s, t, Arcs, [], L).
+   L = 3 ;
+   L = 2 ;
+   false.
+   ```
+
+   *Explanation:*
+   Paths are `s→a→b→t` (3 arcs) and `s→c→t` (2 arcs).
+
+2. **Start = Goal (length 0):**
+
+   ```prolog
+   ?- path_length_dir(p, p, [[p,q]], [], L).
+   L = 0.
+   ```
+
+   *Explanation:*
+   Single‐vertex path `[p]` has 0 arcs.
+
+3. **No path:**
+
+   ```prolog
+   ?- path_length_dir(a, d, [[a,b],[c,d]], [], L).
+   false.
+   ```
+
+   *Explanation:*
+   `d` is unreachable from `a` under directed arcs.
+
+---
+
+#### 9.2.7 `reachable_dir/3`
+
+```prolog
+%% reachable_dir(+Frontier, +Arcs, -AllReached) is det.
+%% Starting from Frontier list of vertices, collects every vertex reachable
+%% via directed arcs in Arcs. Result may include duplicates; caller can sort.
+reachable_dir([], _Arcs, []).
+reachable_dir([U|Us], Arcs, Reachable) :-
+    reachable_dir(Us, Arcs, R1),
+    (   member(U, R1)
+    ->  Reachable = R1
+    ;   neighbors_out(U, Arcs, Ns),
+        append(Ns, R1, Temp),
+        Reachable = [U|Temp]
+    ).
+```
+
+**Description:**
+Performs a graph traversal respecting direction (similar to a BFS/DFS).  Returns all vertices reachable from any in the initial `Frontier`.
+
+**Examples:**
+
+1. **Simple reachability:**
+
+   ```prolog
+   ?- reachable_dir([1], [[1,2],[2,3],[2,4],[5,1]], Rs),
+      sort(Rs, Sorted).
+   Rs = [1, 2, 3, 4],   % unsorted but including duplicates
+   Sorted = [1,2,3,4].
+   ```
+
+   *Explanation:*
+   From `1` you can visit `2`, then `3` and `4`.  The arc `[5,1]` is irrelevant since it points into `1`.
+
+2. **Multi‐source frontier:**
+
+   ```prolog
+   ?- reachable_dir([2,5], [[1,2],[2,3],[3,4],[5,6],[6,7]], Rs),
+      sort(Rs, Sorted).
+   Rs = [2,3,4,5,6,7],
+   Sorted = [2,3,4,5,6,7].
+   ```
+
+   *Explanation:*
+   Starting from `2` gives `{2,3,4}`, from `5` gives `{5,6,7}`.  Combined as `[2,3,4,5,6,7]`.
+
+3. **No outgoing arcs:**
+
+   ```prolog
+   ?- reachable_dir([x], [[a,b],[b,c]], Rs).
+   Rs = [x].
+   ```
+
+   *Explanation:*
+   `x` has no outgoing arcs, so only `x` is reachable.
+
+---
+
+#### 9.2.8 `connected_dir/2` (Strong Connectivity)
+
+```prolog
+%% connected_dir(+Vertices, +Arcs) is semidet.
+%% True if for every pair of distinct vertices U and V in Vertices,
+%% U can reach V and V can reach U (i.e. strongly connected).
+connected_dir(Vertices, Arcs) :-
+    forall(
+      ( member(U, Vertices), member(V, Vertices), U \= V ),
+      ( reachable_dir([U], Arcs, ReachUV),
+        member(V, ReachUV),
+        reachable_dir([V], Arcs, ReachVU),
+        member(U, ReachVU)
+      )
+    ).
+```
+
+**Description:**
+Checks strong connectivity: for each pair `(U,V)`, there must be a directed path `U→…→V` and also `V→…→U`.  Uses `reachable_dir/3`.
+
+**Examples:**
+
+1. **Strongly connected cycle:**
+
+   ```prolog
+   ?- connected_dir([1,2,3], [[1,2],[2,3],[3,1]], Yes).
+   Yes = true.
+   ```
+
+   *Explanation:*
+   Each can reach each via the cycle.
+
+2. **Not strongly connected (missing back‐edge):**
+
+   ```prolog
+   ?- connected_dir([a,b,c], [[a,b],[b,c],[c,a]], true).
+   true.
+   ?- connected_dir([a,b,c], [[a,b],[b,c]], _).
+   false.
+   ```
+
+   *Explanation:*
+   In the second graph, you cannot go back from `c` to `a`.
+
+3. **Single vertex trivially strongly connected:**
+
+   ```prolog
+   ?- connected_dir([x], [], true).
+   true.
+   ```
+
+   *Explanation:*
+   A single vertex is always (vacuously) strongly connected to itself.
+
+---
+
+#### 9.2.9 `component_dir/3` (Strongly Connected Component)
+
+```prolog
+%% component_dir(+U, +Arcs, -Comp) is det.
+%% Comp is the list of all vertices V such that U can reach V and V can reach U.
+component_dir(U, Arcs, CompSorted) :-
+    reachable_dir([U], Arcs, Reach1),
+    findall(W,
+        ( member(W, Reach1),
+          reachable_dir([W], Arcs, ReachW),
+          member(U, ReachW)
+        ),
+        Comp),
+    sort(Comp, CompSorted).
+```
+
+**Description:**
+Returns the maximal strongly connected component containing `U`.  First finds all vertices reachable from `U`, then filters to those from which `U` is also reachable.
+
+**Examples:**
+
+1. **Simple three‐node SCC:**
+
+   ```prolog
+   ?- component_dir(a, [[a,b],[b,c],[c,a],[c,d]], Comp).
+   Comp = [a,b,c].
+   ```
+
+   *Explanation:*
+   Nodes `a,b,c` form a cycle; `d` is not included because `d` cannot reach `a`.
+
+2. **Isolated vertex yields singleton:**
+
+   ```prolog
+   ?- component_dir(x, [[y,z],[z,y]], C).
+   C = [x].
+   ```
+
+   *Explanation:*
+   `x` is not in any arc, so only `x` itself is in its SCC.
+
+3. **Two disjoint strong components:**
+
+   ```prolog
+   ?- Arcs = [[1,2],[2,1],[3,4],[4,3],[2,3]],
+      component_dir(2, Arcs, C1),
+      component_dir(3, Arcs, C2).
+   C1 = [1,2],
+   C2 = [3,4].
+   ```
+
+   *Explanation:*
+   There is a linkage `2→3`, but no path back, so `1,2` remain their own SCC and `3,4` form theirs.
+
+---
+
+#### 9.2.10 `has_cycle_dir/2`
+
+```prolog
+%% has_cycle_dir(+Vertices, +Arcs) is semidet.
+%% True if there is at least one directed cycle in the graph.
+has_cycle_dir(Vertices, Arcs) :-
+    member(U, Vertices),
+    cycle_dir(U, U, Arcs, [], _).
+
+%% cycle_dir(+Start, +Curr, +Arcs, +Visited, -Cycle)
+%% Finds a directed cycle starting and ending at Start, length ≥ 1.
+cycle_dir(Start, Curr, Arcs, Visited, [Start,Curr]) :-
+    edge_dir(Curr, Start, Arcs),
+    \+ member(Start, Visited),
+    !.
+cycle_dir(Start, Curr, Arcs, Visited, [Curr|Rest]) :-
+    \+ member(Curr, Visited),
+    edge_dir(Curr, Next, Arcs),
+    Next \= Start,
+    cycle_dir(Start, Next, Arcs, [Curr|Visited], Rest).
+```
+
+**Description:**
+Searches for any directed cycle in which you can leave `U` and eventually return to `U`.  It avoids revisiting other vertices by tracking `Visited`.  On success, it returns one example cycle.
+
+**Examples:**
+
+1. **Simple 2-node cycle:**
+
+   ```prolog
+   ?- has_cycle_dir([u,v], [[u,v],[v,u],[v,w]]).
+   true.
+   ```
+
+   *Explanation:*
+   The cycle `u→v→u` exists.
+
+2. **Longer directed cycle:**
+
+   ```prolog
+   ?- has_cycle_dir([1,2,3,4], [[1,2],[2,3],[3,4],[4,1],[2,4]]).
+   true.
+   ```
+
+   *Explanation:*
+   One cycle is `1→2→3→4→1`.
+
+3. **No cycle (acyclic DAG):**
+
+   ```prolog
+   ?- has_cycle_dir([a,b,c], [[a,b],[b,c]], false).
+   false.
+   ```
+
+   *Explanation:*
+   A simple directed path: no way to return to the start.
+
+---
+
+#### 9.2.11 `shortest_path_dir/5`
+
+```prolog
+%% shortest_path_dir(+Start, +Goal, +Arcs, -Path, -Dist) is semidet.
+%% Finds a shortest directed path Path = [Start,…,Goal], Dist = number of arcs.
+shortest_path_dir(Start, Goal, Arcs, Path, Dist) :-
+    bfs_dir([[Start,[Start]]], Goal, Arcs, [Start], PathRev),
+    reverse(PathRev, Path),
+    length(Path, L), Dist is L - 1.
+
+%% bfs_dir(+Queue, +Goal, +Arcs, +Visited, -ResultPath)
+bfs_dir([[Goal, Path]|_], Goal, _Arcs, _Visited, Path).
+bfs_dir([[Curr, PathSoFar]|Queue], Goal, Arcs, Visited, Result) :-
+    Curr \= Goal,
+    findall(
+      [Next, [Next|PathSoFar]],
+      ( edge_dir(Curr, Next, Arcs),
+        \+ member(Next, Visited)
+      ),
+      NextPairs
+    ),
+    extract_vertices(NextPairs, NewVs),
+    append(Visited, NewVs, Visited2),
+    append(Queue, NextPairs, NewQueue),
+    bfs_dir(NewQueue, Goal, Arcs, Visited2, Result).
+
+extract_vertices([], []).
+extract_vertices([[V,_]|Rest], [V|Vs]) :-
+    extract_vertices(Rest, Vs).
+```
+
+**Description:**
+A BFS over directed arcs that stops as soon as `Goal` is dequeued.  Because BFS explores by layers of increasing depth, the first time you dequeue `Goal`, you have found a shortest (fewest‐arcs) path.
+
+**Examples:**
+
+1. **Unique shortest directed path:**
+
+   ```prolog
+   ?- Arcs = [[s,a],[a,t],[s,b],[b,t]],
+      shortest_path_dir(s, t, Arcs, P, D).
+   P = [s, a, t],
+   D = 2.
+   ```
+
+   *Explanation:*
+   Both `s→a→t` and `s→b→t` have length 2, but BFS enqueues `[s,a]` before `[s,b]`, so returns `s→a→t`.
+
+2. **Longer graph with detours:**
+
+   ```prolog
+   ?- Arcs = [[1,2],[2,4],[1,3],[3,5],[5,4]],
+      shortest_path_dir(1, 4, Arcs, P, D).
+   P = [1,2,4],
+   D = 2.
+   ```
+
+   *Explanation:*
+   Although `1→3→5→4` is a valid path (3 arcs), `1→2→4` (2 arcs) is shorter.
+
+3. **No path:**
+
+   ```prolog
+   ?- shortest_path_dir(a, d, [[a,b],[c,d]], P, D).
+   false.
+   ```
+
+   *Explanation:*
+   `d` cannot be reached from `a` under directed arcs.
+
+---
+
+
