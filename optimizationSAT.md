@@ -449,17 +449,7 @@ relateBarContainer.
 
 ---
 
-#### 2.1.4 When to use `expressAnd/2` instead
 
-If you need **Y <--> (X1 ∧ X2 ∧ …)**, swap in:
-
-```prolog
-    expressAnd( Y(A,B), Lits )
-```
 
 ---
 
-*End of Cheatsheet*
-
-```
-```
