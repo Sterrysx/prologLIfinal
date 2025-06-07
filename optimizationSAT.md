@@ -1,4 +1,4 @@
-````markdown
+
 # SAT Constraint Cheatsheet for Prolog-based SAT Solver
 
 ## Table of Contents
