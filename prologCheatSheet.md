@@ -5591,6 +5591,526 @@ Uses a breadth‐first search (BFS) approach to guarantee that the first time we
    *Explanation:*
    No sequence of edges leads from `x` to `y`, so it fails.
 
+
+#### 9.1.11 is\_tree/2
+
+```prolog
+%% is_tree(+Vertices, +Edges) is semidet.
+%% True if the undirected graph (Vertices,Edges) is a tree:
+%%   1. It is connected.
+%%   2. It contains no cycles.
+is_tree(Vertices, Edges) :-
+    connected(Vertices, Edges),
+    \+ has_cycle(Vertices, Edges).
+```
+
+**Description:**
+Succeeds exactly when the graph is connected and acyclic—i.e., it has exactly one connected component and no simple cycles.
+
+**Examples:**
+
+1. **A simple tree (chain of 3):**
+
+   ```prolog
+   ?- is_tree([1,2,3], [[1,2],[2,3]]).
+   true.
+   ```
+
+   *Explanation:* The graph is connected and has no cycle.
+
+2. **Not a tree because of a cycle:**
+
+   ```prolog
+   ?- is_tree([1,2,3], [[1,2],[2,3],[3,1]]).
+   false.
+   ```
+
+   *Explanation:* Although connected, the triangle \[1–2–3–1] is a cycle.
+
+3. **Not a tree because disconnected:**
+
+   ```prolog
+   ?- is_tree([1,2,3,4], [[1,2],[2,3]]).
+   false.
+   ```
+
+   *Explanation:* Vertex 4 is isolated, so the graph isn’t connected.
+
+---
+
+#### 9.1.12 number\_of\_components/3
+
+```prolog
+%% number_of_components(+Vertices, +Edges, -N) is det.
+%% N is the number of connected components in the graph.
+number_of_components(Vertices, Edges, N) :-
+    findall(Comp,
+            ( member(V, Vertices),
+              component(V, Edges, Comp)
+            ),
+            Comps),
+    sort(Comps, UniqueComps),
+    length(UniqueComps, N).
+```
+
+**Description:**
+Computes how many disjoint connected subgraphs (components) the graph has by using `component/3` for every vertex, removing duplicates via `sort/2`, and counting.
+
+**Examples:**
+
+1. **Single component:**
+
+   ```prolog
+   ?- number_of_components([1,2,3], [[1,2],[2,3]], N).
+   N = 1.
+   ```
+
+   *Explanation:* All vertices connect into one component.
+
+2. **Two components:**
+
+   ```prolog
+   ?- number_of_components([a,b,c,d], [[a,b],[c,d]], N).
+   N = 2.
+   ```
+
+   *Explanation:* {a,b} and {c,d} are separate.
+
+3. **All isolated vertices:**
+
+   ```prolog
+   ?- number_of_components([1,2,3], [], N).
+   N = 3.
+   ```
+
+   *Explanation:* No edges, so each vertex is its own component.
+
+---
+
+#### 9.1.13 spanning\_tree/3
+
+```prolog
+%% spanning_tree(+Vertices, +Edges, -TreeEdges) is nondet.
+%% TreeEdges is a set of |Vertices|-1 edges forming a spanning tree
+%% of a connected graph.
+spanning_tree(Vertices, Edges, TreeEdges) :-
+    length(Vertices, N),
+    M is N - 1,
+    combination(M, Edges, TreeEdges),
+    connected(Vertices, TreeEdges).
+
+%% combination(+K, +List, -Comb)
+%% True if Comb is a K-element sublist of List.
+combination(0, _List, []) :- !.
+combination(K, [H|T], [H|Comb]) :-
+    K > 0,
+    K1 is K - 1,
+    combination(K1, T, Comb).
+combination(K, [_|T], Comb) :-
+    K > 0,
+    combination(K, T, Comb).
+```
+
+**Description:**
+Nondeterministically picks K = |V|-1 edges and checks if they connect all vertices without leaving any component disconnected. Each solution is one spanning tree.
+
+**Examples:**
+
+1. **Unique spanning tree in a chain:**
+
+   ```prolog
+   ?- spanning_tree([1,2,3], [[1,2],[2,3]], T).
+   T = [[1,2],[2,3]].
+   ```
+
+   *Explanation:* Only one way to pick 2 edges that connect all three vertices.
+
+2. **Two possible spanning trees in a square:**
+
+   ```prolog
+   ?- Edges = [[1,2],[2,3],[3,4],[4,1]], spanning_tree([1,2,3,4], Edges, T).
+   T = [[1,2],[2,3],[3,4]] ;
+   T = [[2,3],[3,4],[4,1]] ;
+   T = [[3,4],[4,1],[1,2]] ;
+   T = [[4,1],[1,2],[2,3]] ;
+   false.
+   ```
+
+   *Explanation:* Any three edges of the cycle form a spanning tree.
+
+3. **Fails if graph disconnected:**
+
+   ```prolog
+   ?- spanning_tree([a,b,c], [[a,b]], T).
+   false.
+   ```
+
+   *Explanation:* No way to connect all vertices with just one edge.
+
+---
+
+#### 9.1.14 forest/3
+
+```prolog
+%% forest(+Vertices, +Edges, -ForestEdges) is det.
+%% ForestEdges is a spanning forest: a union of spanning trees
+%% for each connected component.
+forest(Vertices, Edges, ForestEdges) :-
+    number_of_components(Vertices, Edges, _),
+    findall(T,
+            ( member(V, Vertices),
+              component(V, Edges, Comp),
+              spanning_tree(Comp, Edges, T)
+            ),
+            Trees),
+    append(Trees, ForestEdges).
+```
+
+**Description:**
+Builds a spanning tree for each component and concatenates their edges into a forest. Equivalent to a minimum spanning forest when edge weights are ignored.
+
+**Examples:**
+
+1. **Single component reduces to its tree:**
+
+   ```prolog
+   ?- forest([1,2,3], [[1,2],[2,3]], F).
+   F = [[1,2],[2,3]].
+   ```
+
+   *Explanation:* Only one component ⇒ same as its spanning tree.
+
+2. **Two components each of size 2:**
+
+   ```prolog
+   ?- forest([a,b,c,d], [[a,b],[c,d]], F).
+   F = [[a,b],[c,d]].
+   ```
+
+   *Explanation:* Trees for {a,b} and {c,d}.
+
+3. **Larger component + isolated vertex:**
+
+   ```prolog
+   ?- forest([1,2,3,4], [[1,2],[2,3]], F).
+   F = [[1,2],[2,3]].
+   ```
+
+   *Explanation:* Vertex 4 is its own trivial tree (no edges).
+
+---
+
+#### 9.1.15 bridge/4
+
+```prolog
+%% bridge(+X, +Y, +Vertices, +Edges) is semidet.
+%% True if edge [X,Y] is a bridge: removing it increases
+%% the number of components.
+bridge(X, Y, Vertices, Edges) :-
+    edge(X, Y, Edges),
+    delete_edge(X, Y, Edges, Edges1),
+    number_of_components(Vertices, Edges, N0),
+    number_of_components(Vertices, Edges1, N1),
+    N1 > N0.
+
+%% delete_edge(+X, +Y, +Edges, -Edges1)
+%% True if Edges1 is Edges without the undirected edge [X,Y].
+delete_edge(X, Y, Edges, Edges1) :-
+    ( select([X,Y], Edges, Edges1)
+    ; select([Y,X], Edges, Edges1)
+    ).
+```
+
+**Description:**
+An edge is a bridge if its removal disconnects some part of the graph (i.e., increases component count).
+
+**Examples:**
+
+1. **Bridge in a chain:**
+
+   ```prolog
+   ?- bridge(2,3,[1,2,3], [[1,2],[2,3]], B).
+   B = true.
+   ```
+
+   *Explanation:* Removing \[2,3] splits off vertex 3.
+
+2. **Non-bridge in a triangle:**
+
+   ```prolog
+   ?- bridge(1,2,[1,2,3], [[1,2],[2,3],[3,1]], B).
+   B = false.
+   ```
+
+   *Explanation:* Graph remains connected after removing any single edge.
+
+3. **Edge not present:**
+
+   ```prolog
+   ?- bridge(a,b,[a,b,c], [[b,c]], B).
+   false.
+   ```
+
+   *Explanation:* \[a,b] isn’t in Edges, so predicate fails.
+
+---
+
+#### 9.1.16 articulation\_point/3
+
+```prolog
+%% articulation_point(+X, +Vertices, +Edges) is semidet.
+%% True if removing vertex X (and its incident edges)
+%% increases the number of components.
+articulation_point(X, Vertices, Edges) :-
+    delete(X, Vertices, V1),
+    exclude(incident(X), Edges, E1),
+    \+ connected(V1, E1).
+
+%% incident(+X, +Edge)
+%% True if Edge is incident on X.
+incident(X, [X,_]).
+incident(X, [_,X]).
+```
+
+**Description:**
+A vertex is an articulation point (cut-vertex) if removing it and all its edges disconnects the graph.
+
+**Examples:**
+
+1. **Middle of a chain is an articulation point:**
+
+   ```prolog
+   ?- articulation_point(2, [1,2,3], [[1,2],[2,3]]).
+   true.
+   ```
+
+   *Explanation:* Removing 2 splits 1 and 3.
+
+2. **Leaf is not an articulation point:**
+
+   ```prolog
+   ?- articulation_point(3, [1,2,3], [[1,2],[2,3]]).
+   false.
+   ```
+
+   *Explanation:* Removing 3 leaves 1–2 connected.
+
+3. **No articulation in a triangle:**
+
+   ```prolog
+   ?- articulation_point(1, [1,2,3], [[1,2],[2,3],[3,1]]).
+   false.
+   ```
+
+   *Explanation:* Triangle remains connected after any single-vertex removal.
+
+---
+
+#### 9.1.17 is\_bipartite/2
+
+```prolog
+%% is_bipartite(+Vertices, +Edges) is semidet.
+%% True if the graph is 2-colorable (no odd-length cycles).
+is_bipartite(Vertices, Edges) :-
+    \+ has_odd_cycle(Vertices, Edges).
+
+%% has_odd_cycle(+Vs, +Es) is nondet.
+%% Detects any simple cycle of odd length ≥ 3.
+has_odd_cycle(Vs, Es) :-
+    member(Start, Vs),
+    odd_cycle_from(Start, Start, Es, [], 0).
+
+odd_cycle_from(Start, Curr, Es, Visited, Len) :-
+    adjacent(Curr, Next, Es),
+    (   Next == Start,
+        Len >= 2,
+        0 is Len mod 2
+    ;   \+ member(Next, Visited),
+        Len1 is Len + 1,
+        odd_cycle_from(Start, Next, Es, [Curr|Visited], Len1)
+    ).
+```
+
+**Description:**
+A graph is bipartite iff it has no simple cycle of odd length. We search for any odd cycle; if none exists, the graph is 2-colorable.
+
+**Examples:**
+
+1. **Even cycle (square) is bipartite:**
+
+   ```prolog
+   ?- is_bipartite([1,2,3,4], [[1,2],[2,3],[3,4],[4,1]]).
+   true.
+   ```
+
+   *Explanation:* No odd cycles.
+
+2. **Triangle is not bipartite:**
+
+   ```prolog
+   ?- is_bipartite([1,2,3], [[1,2],[2,3],[3,1]]).
+   false.
+   ```
+
+   *Explanation:* 3-cycle is odd.
+
+3. **Disconnected union of two chains:**
+
+   ```prolog
+   ?- is_bipartite([a,b,c,d], [[a,b],[b,c],[c,d]]).
+   true.
+   ```
+
+   *Explanation:* Chains are always bipartite.
+
+---
+
+#### 9.1.18 eccentricity/4
+
+```prolog
+%% eccentricity(+X, +Vertices, +Edges, -E) is det.
+%% E is the maximum distance (number of edges) from X
+%% to any vertex reachable in the graph.
+eccentricity(X, Vertices, Edges, E) :-
+    findall(L,
+            ( member(Y, Vertices),
+              path_length(X, Y, Edges, [], L)
+            ),
+            Lengths),
+    max_list(Lengths, E).
+```
+
+**Description:**
+For each vertex Y reachable from X, compute the simple‐path length L, then take the maximum.
+
+**Examples:**
+
+1. **Chain distance:**
+
+   ```prolog
+   ?- eccentricity(1, [1,2,3,4], [[1,2],[2,3],[3,4]], E).
+   E = 3.
+   ```
+
+   *Explanation:* Farthest from 1 is 4, distance 3.
+
+2. **Single vertex has eccentricity 0:**
+
+   ```prolog
+   ?- eccentricity(a, [a], [], E).
+   E = 0.
+   ```
+
+   *Explanation:* No other vertices.
+
+3. **Isolated vertex among others:**
+
+   ```prolog
+   ?- eccentricity(5, [5,6,7], [[6,7]], E).
+   E = 0.
+   ```
+
+   *Explanation:* 5 can only reach itself.
+
+---
+
+#### 9.1.19 diameter/3
+
+```prolog
+%% diameter(+Vertices, +Edges, -D) is det.
+%% D is the maximum eccentricity over all vertices,
+%% i.e., the longest shortest‐path in the graph.
+diameter(Vertices, Edges, D) :-
+    findall(E,
+            ( member(X, Vertices),
+              eccentricity(X, Vertices, Edges, E)
+            ),
+            Es),
+    max_list(Es, D).
+```
+
+**Description:**
+The diameter is the greatest distance between any pair of vertices in the graph.
+
+**Examples:**
+
+1. **Chain of 4:**
+
+   ```prolog
+   ?- diameter([1,2,3,4], [[1,2],[2,3],[3,4]], D).
+   D = 3.
+   ```
+
+   *Explanation:* Farthest pair is 1–4 at distance 3.
+
+2. **Triangle has diameter 1:**
+
+   ```prolog
+   ?- diameter([1,2,3], [[1,2],[2,3],[3,1]], D).
+   D = 1.
+   ```
+
+   *Explanation:* All vertices are neighbors.
+
+3. **Disconnected graph:**
+
+   ```prolog
+   ?- diameter([a,b,c], [[a,b]], D).
+   D = 1.
+   ```
+
+   *Explanation:* We only measure within components; isolated c has eccentricity 0, so max is 1.
+
+---
+
+#### 9.1.20 radius/3
+
+```prolog
+%% radius(+Vertices, +Edges, -R) is det.
+%% R is the minimum eccentricity among all vertices,
+%% i.e., the distance from a “best” central vertex.
+radius(Vertices, Edges, R) :-
+    findall(E,
+            ( member(X, Vertices),
+              eccentricity(X, Vertices, Edges, E)
+            ),
+            Es),
+    min_list(Es, R).
+```
+
+**Description:**
+The radius is the smallest maximum distance from any vertex to all others—i.e., how far from the “center” of the graph.
+
+**Examples:**
+
+1. **Chain of 5:**
+
+   ```prolog
+   ?- radius([1,2,3,4,5], [[1,2],[2,3],[3,4],[4,5]], R).
+   R = 2.
+   ```
+
+   *Explanation:* Vertices 2 or 3 minimize the farthest distance (2 edges).
+
+2. **Star shape:**
+
+   ```prolog
+   ?- radius([c,a,b,d], [[c,a],[c,b],[c,d]], R).
+   R = 1.
+   ```
+
+   *Explanation:* Center c has eccentricity 1.
+
+3. **Disconnected graph:**
+
+   ```prolog
+   ?- radius([x,y,z], [[x,y]], R).
+   R = 0.
+   ```
+
+   *Explanation:* The isolated z has eccentricity 0, which is the minimum.
+
+
 ---
 
 ### 9.2 Directed Graphs
@@ -6192,6 +6712,497 @@ A BFS over directed arcs that stops as soon as `Goal` is dequeued.  Because BFS 
 
    *Explanation:*
    `d` cannot be reached from `a` under directed arcs.
+
+---
+
+#### 9.2.11 `in_degree/3`
+
+```prolog
+%% in_degree(+U, +Arcs, -D) is det.
+%% D is the number of incoming arcs to vertex U in the directed graph.
+in_degree(U, Arcs, D) :-
+    findall(X, member([X, U], Arcs), Preds),
+    length(Preds, D).
+```
+
+**Description:**
+Counts how many arcs end at `U`.  Each `[X,U]` in `Arcs` contributes one to the in-degree.
+
+**Examples:**
+
+1. **Simple count:**
+
+   ```prolog
+   ?- in_degree(a, [[x,a],[b,a],[a,c]], D).
+   D = 2.
+   ```
+
+   *Explanation:*
+   Only `[x,a]` and `[b,a]` point into `a`.
+
+2. **Zero in-degree (a source):**
+
+   ```prolog
+   ?- in_degree(s, [[s,t],[t,u]], D).
+   D = 0.
+   ```
+
+   *Explanation:*
+   `s` has no incoming arcs.
+
+3. **Self-loop counts as incoming:**
+
+   ```prolog
+   ?- in_degree(v, [[v,v],[u,v]], D).
+   D = 2.
+   ```
+
+   *Explanation:*
+   Both `[v,v]` and `[u,v]` contribute.
+
+---
+
+#### 9.2.12 `in_degree_sequence/3`
+
+```prolog
+%% in_degree_sequence(+Vertices, +Arcs, -Seq) is det.
+%% Seq is the descending sorted list of in-degrees of all vertices.
+in_degree_sequence(Vertices, Arcs, Seq) :-
+    findall(D, (member(V, Vertices), in_degree(V, Arcs, D)), Degrees),
+    sort(Degrees, SortedAsc),
+    reverse(SortedAsc, Seq).
+```
+
+**Description:**
+Computes each vertex’s in-degree and returns the list of those values sorted in descending order.
+
+**Examples:**
+
+1. **Typical case:**
+
+   ```prolog
+   ?- in_degree_sequence([a,b,c], [[a,b],[c,b],[a,c]], Seq).
+   Seq = [2,1,0].
+   ```
+
+   *Explanation:*
+   `b` has in-degree 2, `c` has 1, `a` has 0.
+
+2. **All zero:**
+
+   ```prolog
+   ?- in_degree_sequence([x,y,z], [], Seq).
+   Seq = [0,0,0].
+   ```
+
+   *Explanation:*
+   No arcs, so every in-degree is 0.
+
+3. **Duplicates removed?**
+
+   ```prolog
+   ?- in_degree_sequence([u,v,w], [[u,v],[u,v],[v,w]], Seq).
+   Seq = [2,1,0].
+   ```
+
+   *Explanation:*
+   Although `[u,v]` appears twice, we count both for `v`’s in-degree (2), then sort.
+
+---
+
+#### 9.2.13 `sources/3`
+
+```prolog
+%% sources(+Vertices, +Arcs, -Sources) is det.
+%% Sources is the list of all vertices with in-degree 0.
+sources(Vertices, Arcs, Sources) :-
+    include(\V^( \+ member([_,V], Arcs) ), Vertices, Sources).
+```
+
+**Description:**
+A “source” is a vertex with no incoming arcs.  This collects all such vertices.
+
+**Examples:**
+
+1. **Multiple sources:**
+
+   ```prolog
+   ?- sources([a,b,c,d], [[a,c],[b,c],[c,d]], S).
+   S = [a,b].
+   ```
+
+   *Explanation:*
+   Neither `a` nor `b` has arcs into them.
+
+2. **Single source:**
+
+   ```prolog
+   ?- sources([1,2,3], [[1,2],[2,3]], S).
+   S = [1].
+   ```
+
+   *Explanation:*
+   Only `1` has no incoming arc.
+
+3. **No sources (every vertex has in-degree ≥1):**
+
+   ```prolog
+   ?- sources([x,y], [[x,y],[y,x]], S).
+   S = [].
+   ```
+
+   *Explanation:*
+   Both have incoming arcs.
+
+---
+
+#### 9.2.14 `sinks/3`
+
+```prolog
+%% sinks(+Vertices, +Arcs, -Sinks) is det.
+%% Sinks is the list of all vertices with out-degree 0.
+sinks(Vertices, Arcs, Sinks) :-
+    include(\V^( \+ member([V,_], Arcs) ), Vertices, Sinks).
+```
+
+**Description:**
+A “sink” is a vertex with no outgoing arcs.  This collects all such vertices.
+
+**Examples:**
+
+1. **Multiple sinks:**
+
+   ```prolog
+   ?- sinks([a,b,c,d], [[a,b],[c,d]], S).
+   S = [b,d].
+   ```
+
+   *Explanation:*
+   `b` and `d` have no arcs leaving.
+
+2. **Single sink:**
+
+   ```prolog
+   ?- sinks([1,2,3], [[1,2],[2,3]], S).
+   S = [3].
+   ```
+
+   *Explanation:*
+   Only `3` has out-degree 0.
+
+3. **No sinks:**
+
+   ```prolog
+   ?- sinks([x,y], [[x,y],[y,x]], S).
+   S = [].
+   ```
+
+   *Explanation:*
+   Both have outgoing arcs.
+
+---
+
+#### 9.2.15 `remove_vertex_dir/5`
+
+```prolog
+%% remove_vertex_dir(+V, +Vertices, +Arcs, -NewVertices, -NewArcs) is det.
+%% Deletes vertex V and all arcs incident to V.
+remove_vertex_dir(V, Vertices, Arcs, NewVs, NewAs) :-
+    select(V, Vertices, NewVs),
+    exclude(\A^memberchk(V,A), Arcs, NewAs).
+```
+
+**Description:**
+Removes `V` from the vertex list and filters out any arc `[V,_]` or `[_ ,V]`.
+
+**Examples:**
+
+1. **Basic removal:**
+
+   ```prolog
+   ?- remove_vertex_dir(b, [a,b,c], [[a,b],[b,c],[c,a]], Vs, As).
+   Vs = [a,c],
+   As = [[c,a]].
+   ```
+
+   *Explanation:*
+   Both arcs involving `b` are gone.
+
+2. **No such vertex:**
+
+   ```prolog
+   ?- remove_vertex_dir(x, [a,b], [[a,b]], Vs, As).
+   false.
+   ```
+
+   *Explanation:*
+   `x` is not in the vertex list.
+
+3. **Isolated vertex:**
+
+   ```prolog
+   ?- remove_vertex_dir(z, [x,y,z], [[x,y]], Vs, As).
+   Vs = [x,y],
+   As = [[x,y]].
+   ```
+
+   *Explanation:*
+   `z` had no arcs, so `As` stays the same except `z` removed.
+
+---
+
+#### 9.2.16 `induced_subgraph_dir/4`
+
+```prolog
+%% induced_subgraph_dir(+VertSubset, +Vertices, +Arcs, -SubArcs) is det.
+%% SubArcs are those arcs [U,V] with both U and V in VertSubset.
+induced_subgraph_dir(Vs, _AllVs, Arcs, SubArcs) :-
+    include(\[U,V]^( member(U,Vs), member(V,Vs) ), Arcs, SubArcs).
+```
+
+**Description:**
+Extracts the subgraph on `VertSubset` by keeping only arcs whose both endpoints lie in that subset.
+
+**Examples:**
+
+1. **Proper subgraph:**
+
+   ```prolog
+   ?- induced_subgraph_dir([a,b], [a,b,c], [[a,b],[b,c],[c,a]], SA).
+   SA = [[a,b]].
+   ```
+
+   *Explanation:*
+   Only `[a,b]` lies fully inside `{a,b}`.
+
+2. **Empty result:**
+
+   ```prolog
+   ?- induced_subgraph_dir([x], [x,y], [[x,y],[y,x]], SA).
+   SA = [].
+   ```
+
+   *Explanation:*
+   No `[x,x]` exists.
+
+3. **All inside:**
+
+   ```prolog
+   ?- induced_subgraph_dir([1,2], [1,2], [[1,2],[2,1]], SA).
+   SA = [[1,2],[2,1]].
+   ```
+
+   *Explanation:*
+   Both arcs stay.
+
+---
+
+#### 9.2.17 `reachable_closure/3`
+
+```prolog
+%% reachable_closure(+Vertices, +Arcs, -Closure) is det.
+%% Closure is the transitive-closure: all pairs [U,V] where V is reachable from U.
+reachable_closure(Vertices, Arcs, Closure) :-
+    findall([U,W],
+        ( member(U,Vertices),
+          reachable_dir([U], Arcs, Rs),
+          member(W,Rs),
+          U \= W
+        ),
+        Pairs),
+    sort(Pairs, Closure).
+```
+
+**Description:**
+Builds the relation of reachability: for each `U`, collects every `W` reachable via directed paths.
+
+**Examples:**
+
+1. **Simple chain:**
+
+   ```prolog
+   ?- reachable_closure([1,2,3], [[1,2],[2,3]], C).
+   C = [[1,2],[1,3],[2,3]].
+   ```
+
+   *Explanation:*
+   From `1` you reach `2` and then `3`; from `2` you reach `3`.
+
+2. **Cycle yields self-pairs:**
+
+   ```prolog
+   ?- reachable_closure([a,b], [[a,b],[b,a]], C).
+   C = [[a,b],[a,a],[b,a],[b,b]].
+   ```
+
+   *Explanation:*
+   Each enters a cycle so can reach itself.
+
+3. **Disconnected:**
+
+   ```prolog
+   ?- reachable_closure([x,y], [], C).
+   C = [].
+   ```
+
+   *Explanation:*
+   No arcs, so no reachabilities except trivial, which we omit `U=U`.
+
+---
+
+#### 9.2.18 `is_dag/2`
+
+```prolog
+%% is_dag(+Vertices, +Arcs) is semidet.
+%% True if the directed graph has no directed cycles.
+is_dag(Vertices, Arcs) :-
+    \+ has_cycle_dir(Vertices, Arcs).
+```
+
+**Description:**
+A digraph is acyclic (a DAG) precisely if it has no directed cycle.
+
+**Examples:**
+
+1. **Acyclic:**
+
+   ```prolog
+   ?- is_dag([a,b,c], [[a,b],[b,c]]).
+   true.
+   ```
+2. **Self-loop fails:**
+
+   ```prolog
+   ?- is_dag([x], [[x,x]]).
+   false.
+   ```
+3. **Multi-node cycle fails:**
+
+   ```prolog
+   ?- is_dag([1,2,3], [[1,2],[2,3],[3,1]]).
+   false.
+   ```
+
+---
+
+#### 9.2.19 `condensation/3`
+
+```prolog
+%% condensation(+Vertices, +Arcs, -cond(Comps, CondArcs)) is det.
+%% Builds the condensation graph of strongly connected components.
+condensation(Vs, Arcs, cond(Comps, CondArcs)) :-
+  % 1. Find all SCCs
+  strongly_connected_components(Vs, Arcs, Comps),
+  % 2. Map each vertex to its component index
+  assign_comp_indices(Comps, 1, [], Assigns),
+  % 3. Build arcs between different components
+  findall([Ci,Cj],
+    ( member([U,V], Arcs),
+      member(U-Ci, Assigns),
+      member(V-Cj, Assigns),
+      Ci \= Cj
+    ),
+    Raw),
+  sort(Raw, CondArcs).
+
+%% (Helper predicates `strongly_connected_components/3` and `assign_comp_indices/4`
+%%  are as given in 9.2.19 above.)
+```
+
+**Description:**
+Contracts each strongly connected component into a single node, then creates a DAG of these components by adding an arc from component Ci to Cj whenever there is an original arc from any `U∈Ci` to any `V∈Cj`.
+
+**Examples:**
+
+1. **Two SCCs:**
+
+   ```prolog
+   ?- Vs=[1,2,3,4], Arcs=[[1,2],[2,1],[3,4]], 
+      condensation(Vs,Arcs, C).
+   C = cond([[1,2],[3,4]], [[1,2]]).
+   ```
+
+   *Explanation:*
+   Components are `[1,2]` and `[3,4]`; there is an arc from comp 1→2.
+
+2. **Single big SCC:**
+
+   ```prolog
+   ?- condensation([a,b], [[a,b],[b,a]], C).
+   C = cond([[a,b]], []).
+   ```
+
+   *Explanation:*
+   Only one component; no inter-component arcs.
+
+3. **Chain of SCCs:**
+
+   ```prolog
+   ?- condensation([u,v,w], [[u,v],[v,u],[v,w]], C).
+   C = cond([[u,v],[w]], [[1,2]]).
+   ```
+
+   *Explanation:*
+   `[u,v]` is comp 1, `[w]` is comp 2, and there is an arc 1→2.
+
+---
+
+#### 9.2.20 `topological_sort/3`
+
+```prolog
+%% topological_sort(+Vertices, +Arcs, -Order) is semidet.
+%% If the digraph is acyclic, Order is a list of all vertices in topological order.
+topological_sort(Vs, Arcs, Order) :-
+  % 1. Compute in-degrees
+  maplist({Arcs}/[V-D]>>in_degree(V,Arcs,D), Vs, Pairs),
+  dict_create(Dict, indeg, Pairs),
+  % 2. Initialize queue of zero in-degree vertices
+  findall(V, (member(V,Vs), get_dict(V,Dict,0)), Q0),
+  % 3. Process via Kahn’s algorithm
+  ts_process(Q0, Arcs, Dict, [], Rev),
+  length(Rev,N), length(Vs,N),  % must use all vertices
+  reverse(Rev, Order).
+
+ts_process([], _A, _D, Acc, Acc).
+ts_process([V|Q], Arcs, D0, Acc0, Acc) :-
+  append(Acc0, [V], Acc1),
+  findall(W, edge_dir(V,W,Arcs), Succ),
+  foldl({}/[W,Di,Do,Zs]>>(
+    get_dict(W,Di,D), D1 is D-1, put_dict(W,Di,D1,Do),
+    (D1=:=0 -> Zs=[W] ; Zs=[])
+  ), Succ, D0, D1, NewQs),
+  append(Q,NewQs,Q1),
+  ts_process(Q1,Arcs,D1,Acc1,Acc).
+```
+
+**Description:**
+Implements Kahn’s topological-sort: repeatedly remove a source (in-degree 0), append it to the order, decrement its successors’ in-degrees, enqueue any that become zero.  Fails if the graph has a cycle (i.e. you can’t process all vertices).
+
+**Examples:**
+
+1. **Simple DAG:**
+
+   ```prolog
+   ?- topological_sort([a,b,c], [[a,b],[b,c]], O).
+   O = [a,b,c].
+   ```
+2. **Two possible orders, returns one:**
+
+   ```prolog
+   ?- topological_sort([1,2,3], [[1,3],[2,3]], O).
+   O = [1,2,3] ;
+   false.
+   ```
+3. **Cycle fails:**
+
+   ```prolog
+   ?- topological_sort([x,y], [[x,y],[y,x]], _).
+   false.
+   ```
+
+   *Explanation:*
+   The mutual cycle prevents any linear ordering.
+
 
 ---
 
