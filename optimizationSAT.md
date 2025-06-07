@@ -1,35 +1,44 @@
+````markdown
 # SAT Constraint Cheatsheet for Prolog-based SAT Solver
 
 ## Table of Contents
 
-1. [writeOneClause/1](#writeoneclause)
-2. [atLeast/2](#atleast2)
-3. [atMost/2](#atmost2)
-4. [exactly/2](#exactly2)
-5. [Default Comment Template for Clause Generation](#default-comment-template)
+1. [Clause Generators](#clause-generators)  
+   1.1. [`writeOneClause/1`](#11-writeoneclause)  
+   1.2. [`atLeast/2`](#12-atleast2)  
+   1.3. [`atMost/2`](#13-atmost2)  
+   1.4. [`exactly/2`](#14-exactly2)  
+   1.5. [Default Comment Template for Clause Generation](#15-default-comment-template)  
+
+2. [Clause Skeletons](#clause-skeletons)  
+   2.1. [`relateXwithY` helper-variable equivalence](#21-relatexwithy-helper-variable-equivalence)  
 
 ---
 
-## 1. writeOneClause/1 <a name="writeoneclause"></a>
+## 1. Clause Generators <a name="clause-generators"></a>
+
+### 1.1 `writeOneClause/1` <a name="11-writeoneclause"></a>
 
 ```prolog
 % -------------------------------------------------------------
 % 1. Declare Clause:
 % 2. Iterate Over All Variables:
-% 3. The Constraints (IF NECESSARY):
+% 3. (Optional) Extra Conditions:
 % 4. Write the Clause:
 % 5. Fail + Base Case:
 % -------------------------------------------------------------
-```
+````
 
-### Overview
+#### Overview
+
 The predicate **`writeOneClause/1`** outputs a single clause (a disjunction of literals) in Conjunctive Normal Form (CNF). It translates symbolic literals (e.g., `x(I,J)`, `-x(I,J)`) into a numeric clause for the SAT solver.
 
-### The 5-Step Pattern
+#### The 5-Step Pattern
 
-1. **Declare Clause:**  
-   Define the constraint predicate.  
-   _Example:_  
+1. **Declare Clause:**
+   Define the constraint predicate.
+   *Example:*
+
    ```prolog
    myConstraint :- 
        ...,
@@ -37,35 +46,39 @@ The predicate **`writeOneClause/1`** outputs a single clause (a disjunction of l
    myConstraint.
    ```
 
-2. **Iterate Over All Variables:**  
-   Loop over the relevant variables.  
-   _Example:_  
+2. **Iterate Over All Variables:**
+   Loop over the relevant variables.
+   *Example:*
+
    ```prolog
    myConstraint :-
        slot(I),
        song(J),
-       ...
+       ...,
        fail.
    myConstraint.
    ```
 
-3. **The Constraints:**  
-   Apply any conditions to decide when the clause should be generated.  
-   _Example:_  
+3. **The Constraints:**
+   Apply any conditions to decide when the clause should be generated.
+   *Example:*
+
    ```prolog
    someCondition(I,J),
    ```
 
-4. **Write the Clause:**  
-   Call **`writeOneClause/1`** with a list of literals representing the CNF clause. For instance, the implication _A → B_ translates to _¬A ∨ B_.  
-   _Example:_  
+4. **Write the Clause:**
+   Call **`writeOneClause/1`** with a list of literals representing the CNF clause. For instance, the implication *A → B* translates to *¬A ∨ B*.
+   *Example:*
+
    ```prolog
    writeOneClause([ -x(I,J), x(I2,J2) ]),
    ```
 
-5. **Fail + Base Case:**  
-   End with `fail.` to force backtracking over all possibilities, then provide a base case so the predicate succeeds eventually.  
-   _Example:_  
+5. **Fail + Base Case:**
+   End with `fail.` to force backtracking over all possibilities, then provide a base case so the predicate succeeds eventually.
+   *Example:*
+
    ```prolog
    myConstraint :-
        slot(I),
@@ -78,26 +91,28 @@ The predicate **`writeOneClause/1`** outputs a single clause (a disjunction of l
 
 ---
 
-## 2. atLeast/2 <a name="atleast2"></a>
+### 1.2 `atLeast/2` <a name="12-atleast2"></a>
 
 ```prolog
 % -------------------------------------------------------------
 % 1. Declare Clause:
 % 2. Iterate Over All Variables:
 % 3. The Constraints (IF NECESSARY):
-% 4. Findall+constraint:
+% 4. Findall + atLeast:
 % 5. Fail + Base Case:
 % -------------------------------------------------------------
 ```
 
-### Overview
-The predicate **`atLeast/2`** ensures that at least _N_ literals in a given list are true.
+#### Overview
 
-### The 5-Step Pattern
+The predicate **`atLeast/2`** ensures that at least *K* literals in a given list are true.
 
-1. **Declare Clause:**  
-   Define your constraint predicate (e.g., to ensure each participant sings at least one song).  
-   _Example:_  
+#### The 5-Step Pattern
+
+1. **Declare Clause:**
+   Define your constraint predicate (e.g., to ensure each participant sings at least one song).
+   *Example:*
+
    ```prolog
    everyParticipantAtLeastOneSong :- 
        ...,
@@ -105,34 +120,38 @@ The predicate **`atLeast/2`** ensures that at least _N_ literals in a given list
    everyParticipantAtLeastOneSong.
    ```
 
-2. **Iterate Over All Variables:**  
-   Loop over all participants.  
-   _Example:_  
+2. **Iterate Over All Variables:**
+   Loop over all participants.
+   *Example:*
+
    ```prolog
    everyParticipantAtLeastOneSong :-
        participant(P),
        ...
    ```
 
-3. **The Constraints:**  
-   Identify and collect the candidate literals (e.g., instances where participant _P_ sings a song).  
-   _Example:_  
+3. **The Constraints:**
+   Identify and collect the candidate literals (e.g., instances where participant *P* sings a song).
+   *Example:*
+
    ```prolog
    findall(x(I,J),
            (slot(I), song(J), songParticipant(J,P)),
            Lits),
    ```
 
-4. **Write the Clause Using atLeast:**  
-   Enforce the cardinality constraint that at least one literal is true.  
-   _Example:_  
+4. **Write the Clause Using `atLeast`:**
+   Enforce the cardinality constraint that at least one literal is true.
+   *Example:*
+
    ```prolog
    atLeast(1, Lits),
    ```
 
-5. **Fail + Base Case:**  
-   Use `fail.` to ensure the predicate iterates over all participants, then close with a base case.  
-   _Example:_  
+5. **Fail + Base Case:**
+   Use `fail.` to ensure the predicate iterates over all participants, then close with a base case.
+   *Example:*
+
    ```prolog
    everyParticipantAtLeastOneSong :-
        participant(P),
@@ -144,92 +163,30 @@ The predicate **`atLeast/2`** ensures that at least _N_ literals in a given list
    everyParticipantAtLeastOneSong.
    ```
 
-
-## Explanation of `findall/3` in the SAT Encoding Exercise
-
-In our SAT encoding exercise, each SAT variable is defined by:
-```prolog
-satVariable( x(I, J) ) :- slot(I), song(J).
-```
-This means that the SAT variable `x(I, J)` represents that in slot `I`, song `J` is chosen.
-
 ---
 
-## Mathematical Explanation of `findall/3` in this Context
-
-The Prolog predicate `findall/3` is used to collect **all** possible solutions to a given query into a list. Its general form is:
+### 1.3 `atMost/2` <a name="13-atmost2"></a>
 
 ```prolog
-findall(Template, Goal, List)
+% -------------------------------------------------------------
+% 1. Declare Clause:
+% 2. Iterate Over All Variables:
+% 3. The Constraints:
+% 4. Findall + atMost:
+% 5. Fail + Base Case:
+% -------------------------------------------------------------
 ```
 
-- **Template:** This is what you want to collect. In our exercise, the template is always a SAT variable, such as `x(I, J)`.
-- **Goal:** The condition that must be satisfied. For instance, `song(J)` iterates over all valid songs.
-- **List:** The resulting list that will contain every instance of the Template for which the Goal succeeds.
+#### Overview
 
----
+The predicate **`atMost/2`** guarantees that no more than *K* literals in a list are true.
 
+#### The 5-Step Pattern
 
-prolog
-findall(x, P(x), List)
+1. **Declare Clause:**
+   Define your predicate (e.g., to ensure each song appears in at most one slot).
+   *Example:*
 
-
-can be understood as constructing the set:
-
-{x such that P(x) is true}
-
-
-and returning it as the list List.
-
-
-
-## Example in Our Exercise
-
-Consider the clause for ensuring that every slot has exactly one song:
-
-```prolog
-everySlotExactlyOneSong :-
-    slot(I),
-    findall(x(I, J), song(J), Lits),
-    exactly(1, Lits),
-    fail.
-everySlotExactlyOneSong.
-```
-
-### What is `findall` Collecting Here?
-
-1. **Iteration over Slots:**  
-   The predicate first iterates over every slot `I` using `slot(I)`.
-
-2. **Collecting SAT Variables:**  
-   For each slot `I`, the call  
-   ```prolog
-   findall(x(I, J), song(J), Lits)
-   ```  
-   collects all SAT variables `x(I, J)` such that `song(J)` is true. In other words, it gathers the list `Lits` of all possible literals corresponding to “song `J` is chosen in slot `I`” for every valid song `J`.
-
-3. **Enforcing the Constraint:**  
-   The next line  
-   ```prolog
-   exactly(1, Lits)
-   ```  
-   uses the collected list `Lits` and enforces that **exactly one** literal in this list is true. This means that for slot `I`, exactly one song is selected.
-
-4. **Fail + Base Case:**  
-   The `fail` ensures that Prolog backtracks to process every slot, and the base case (`everySlotExactlyOneSong.`) allows the predicate to succeed after all slots have been processed.
-
-
-
-## 3. atMost/2 <a name="atmost2"></a>
-
-### Overview
-The predicate **`atMost/2`** guarantees that no more than _N_ literals in a list are true.
-
-### The 5-Step Pattern
-
-1. **Declare Clause:**  
-   Define your predicate (e.g., to ensure each song appears in at most one slot).  
-   _Example:_  
    ```prolog
    everySongAtMostOneSlot :- 
        ...,
@@ -237,32 +194,36 @@ The predicate **`atMost/2`** guarantees that no more than _N_ literals in a list
    everySongAtMostOneSlot.
    ```
 
-2. **Iterate Over All Variables:**  
-   Loop over each song.  
-   _Example:_  
+2. **Iterate Over All Variables:**
+   Loop over each song.
+   *Example:*
+
    ```prolog
    everySongAtMostOneSlot :-
        song(J),
        ...
    ```
 
-3. **The Constraints:**  
-   Collect all slot literals for the given song.  
-   _Example:_  
+3. **The Constraints:**
+   Collect all slot literals for the given song.
+   *Example:*
+
    ```prolog
    findall(x(I,J), slot(I), Lits),
    ```
 
-4. **Write the Clause Using atMost:**  
-   Enforce that at most one of these literals can be true.  
-   _Example:_  
+4. **Write the Clause Using `atMost`:**
+   Enforce that at most one of these literals can be true.
+   *Example:*
+
    ```prolog
    atMost(1, Lits),
    ```
 
-5. **Fail + Base Case:**  
-   Finalize with `fail.` to ensure backtracking, then a base case.  
-   _Example:_  
+5. **Fail + Base Case:**
+   Finalize with `fail.` to ensure backtracking, then a base case.
+   *Example:*
+
    ```prolog
    everySongAtMostOneSlot :-
        song(J),
@@ -274,16 +235,28 @@ The predicate **`atMost/2`** guarantees that no more than _N_ literals in a list
 
 ---
 
-## 4. exactly/2 <a name="exactly2"></a>
+### 1.4 `exactly/2` <a name="14-exactly2"></a>
 
-### Overview
-The predicate **`exactly/2`** enforces that exactly _N_ literals in a list are true. It is generally implemented as a combination of **`atLeast/2`** and **`atMost/2`**.
+```prolog
+% -------------------------------------------------------------
+% 1. Declare Clause:
+% 2. Iterate Over All Variables:
+% 3. The Constraints:
+% 4. Findall + exactly:
+% 5. Fail + Base Case:
+% -------------------------------------------------------------
+```
 
-### The 5-Step Pattern
+#### Overview
 
-1. **Declare Clause:**  
-   Define your predicate (e.g., to ensure each slot has exactly one song).  
-   _Example:_  
+The predicate **`exactly/2`** enforces that exactly *K* literals in a list are true. It combines **`atLeast/2`** and **`atMost/2`**.
+
+#### The 5-Step Pattern
+
+1. **Declare Clause:**
+   Define your predicate (e.g., to ensure each slot has exactly one song).
+   *Example:*
+
    ```prolog
    everySlotExactlyOneSong :- 
        ...,
@@ -291,32 +264,37 @@ The predicate **`exactly/2`** enforces that exactly _N_ literals in a list are t
    everySlotExactlyOneSong.
    ```
 
-2. **Iterate Over All Variables:**  
-   Loop over each slot.  
-   _Example:_  
+2. **Iterate Over All Variables:**
+   Loop over each slot.
+   *Example:*
+
    ```prolog
    everySlotExactlyOneSong :-
        slot(I),
        ...
    ```
 
-3. **The Constraints:**  
-   Gather all song literals that could be in slot _I_.  
-   _Example:_  
+3. **The Constraints:**
+   Gather all song literals that could be in slot *I*.
+   *Example:*
+
    ```prolog
    findall(x(I,J), song(J), Lits),
    ```
 
-4. **Write the Clause Using exactly:**  
+4. **Write the Clause Using `exactly`:**
    Enforce that exactly one literal in this list is true by calling:
+
    ```prolog
    exactly(1, Lits),
    ```
-   *(Note: `exactly(1, Lits)` is implemented as `atLeast(1, Lits)` combined with `atMost(1, Lits)`.)*
 
-5. **Fail + Base Case:**  
-   Use `fail.` to iterate over all slots and finish with a base case.  
-   _Example:_  
+   *(Note: internally, `exactly/2` invokes `atLeast/2` and `atMost/2`.)*
+
+5. **Fail + Base Case:**
+   Use `fail.` to iterate over all slots and finish with a base case.
+   *Example:*
+
    ```prolog
    everySlotExactlyOneSong :-
        slot(I),
@@ -328,9 +306,7 @@ The predicate **`exactly/2`** enforces that exactly _N_ literals in a list are t
 
 ---
 
-## 5. Default Comment Template for Clause Generation <a name="default-comment-template"></a>
-
-Include the following template as a header in your Prolog clause definitions to outline the five standard steps:
+### 1.5 Default Comment Template for Clause Generation <a name="15-default-comment-template"></a>
 
 ```prolog
 % -------------------------------------------------------------
@@ -365,3 +341,125 @@ Include the following template as a header in your Prolog clause definitions to 
 ```
 
 ---
+
+## 2. Clause Skeletons <a name="clause-skeletons"></a>
+
+### 2.1 `relateXwithY` helper-variable equivalence <a name="21-relatexwithy-helper-variable-equivalence"></a>
+
+> **Goal:** introduce a helper SAT variable **Y(Shared…)** that is true exactly WHEN some (OR all) of a family of literals **X(Shared, Extra…)** hold.
+
+#### 2.1.1 Generic Skeleton (OR version)
+
+```prolog
+relateXwithY :-
+    % 1) Iterate over the shared indices:
+    shared1(A), shared2(B), ...,
+
+    % 2) Collect all X-literals that share those indices but differ
+    %    in the extra ones (Extra1, Extra2, …):
+    findall(
+      X(A,B,Extra1,Extra2,...),      % the X-literal template
+      ( extraIdx1(Extra1),
+        extraIdx2(Extra2),
+        ...                          % generators for un-shared indices
+      ),
+      Lits
+    ),
+
+    % 3) Emit the equivalence Y <--> OR(Lits):
+    expressOr(Y(A,B), Lits),
+
+    % 4) Force backtracking:
+    fail.
+relateXwithY.                       % base case
+```
+
+> **Why put only the un-shared indices inside `findall/3`?**
+> Because those are the dimensions present in `X(...)` but **absent** in `Y(...)`; ranging over them enumerates every way to make `Y` true.
+
+---
+
+#### 2.1.2 Example 1: `busyAtHour` vs. `does`
+
+**SAT vars:**
+
+```prolog
+satVariable( does(G,T,H) )      :- gangster(G), task(T), hour(H).
+satVariable( busyAtHour(G,H) )  :- gangster(G), hour(H).
+```
+
+**Relation:**
+
+```
+busyAtHour(G,H) <--> ∨ₜ does(G,T,H)
+```
+
+```prolog
+relateDoesBusy :-
+    % shared indices G,H:
+    gangster(G), hour(H),
+
+    % un-shared = T:
+    findall( does(G,T,H),
+             task(T),
+             Lits ),
+
+    expressOr( busyAtHour(G,H), Lits ),
+    fail.
+relateDoesBusy.
+```
+
+* **Shared:** G, H
+* **Un-shared:** T
+
+---
+
+#### 2.1.3 Example 2: `c(J)` vs. `bc(I,J)`
+
+**SAT vars:**
+
+```prolog
+satVariable( bc(I,J) ) :- bar(I),    container(J).
+satVariable( c(J)    ) :-            container(J).
+```
+
+**Relation:**
+
+```
+c(J) <--> ∨ᵢ bc(I,J)
+```
+
+```prolog
+relateBarContainer :-
+    % shared index J:
+    container(J),
+
+    % un-shared = I:
+    findall( bc(I,J),
+             bar(I),
+             Lits ),
+
+    expressOr( c(J), Lits ),
+    fail.
+relateBarContainer.
+```
+
+* **Shared:** J
+* **Un-shared:** I
+
+---
+
+#### 2.1.4 When to use `expressAnd/2` instead
+
+If you need **Y <--> (X1 ∧ X2 ∧ …)**, swap in:
+
+```prolog
+    expressAnd( Y(A,B), Lits )
+```
+
+---
+
+*End of Cheatsheet*
+
+```
+```
