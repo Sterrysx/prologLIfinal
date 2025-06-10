@@ -100,8 +100,6 @@ audiowrite('voice_filtered.wav', xf, fs);
 
 ## 2. Métodos no lineales
 
-> En esta sección presentamos una pequeña **cheatsheet** con los métodos de búsqueda de raíces estudiados, sus fórmulas clave y a continuación los scripts MATLAB que resuelven cada ejercicio.
-
 ### 2.1 Método gráfico de puntos fijos
 
 * **Objetivo:** visualizar la intersección de $y=\cos(x)$ y $y=x$ como paso introductorio al método de puntos fijos.
