@@ -4,9 +4,9 @@
 
 1. [Transformada de Fourier: conceptos básicos](#1-transformada-de-fourier-conceptos-básicos)
 2. [Métodos no lineales](#2-métodos-no-lineales)
-3. [Errores numéricos y conceptos puntuales](#3-errores-numéricos-y-conceptos-puntuales)
-4. [Derivadas e integrales numéricas](#4-derivadas-e-integrales-numéricas)
-5. [Ecuaciones diferenciales ordinarias (EDO)](#5-ecuaciones-diferenciales-ordinarias-edo)
+3. [Derivada](#3-derivada)
+4. [Integral](#4-integral)
+6. [Ecuaciones diferenciales ordinarias (EDO)](#5-ecuaciones-diferenciales-ordinarias-edo)
 
 ---
 
@@ -283,4 +283,210 @@ fprintf('Secante raíz: x=%.5f, f(x)=%.5f, iter=%d\n', x1, f(x1), i);
 ```
 
 ---
+
+## 3. Derivada
+
+> **Cheatsheet:** métodos de diferencias finitas
+>
+> * **Forward:**
+>
+>   $$
+>     f'(x_i) \approx \frac{f(x_{i+1}) - f(x_i)}{\Delta x}
+>   $$
+> * **Backward:**
+>
+>   $$
+>     f'(x_i) \approx \frac{f(x_i) - f(x_{i-1})}{\Delta x}
+>   $$
+> * **Centrada:**
+>
+>   $$
+>     f'(x_i) \approx \frac{f(x_{i+1}) - f(x_{i-1})}{2\Delta x}
+>   $$
+> * **Condiciones de contorno periódicas:** usar índices modulados en extremos.
+> * **Segunda derivada centrada:**
+>
+>   $$
+>     f''(x_i) \approx \frac{f(x_{i+1}) - 2f(x_i) + f(x_{i-1})}{(\Delta x)^2}
+>   $$
+
+Se considera:
+
+```matlab
+f = @(x) sin(x) + x - 1;
+fa = @(x) cos(x) + 1;    % derivada analítica
+f2a = @(x) -cos(x);      % segunda derivada analítica
+```
+
+Con resoluciones:
+
+```matlab
+deltas = [0.1, 0.01, 1e-4];
+```
+
+### 3.1 Gráfica de f(x)
+
+```matlab
+x = 0:deltas(1):2*pi;
+figure;
+plot(x, f(x));
+xlabel('x'); ylabel('f(x)');
+title('f(x) = sin(x) + x - 1'); grid on;
+```
+
+### 3.2 Diferencias hacia atrás
+
+```matlab
+h = deltas(2);
+x = 0:h:2*pi;
+fb = (f(x) - f([x(1), x(1:end-1)])) / h;
+figure;
+plot(x, fb, 'o', x, fa(x), '-');
+legend('Backward num.', 'Analítica');
+title('Backward Difference'); grid on;
+```
+
+### 3.3 Diferencias hacia adelante
+
+```matlab
+h = deltas(2);
+x = 0:h:2*pi;
+fwd = (f([x(2:end), x(end)]) - f(x)) / h;
+figure;
+plot(x, fwd, 'o', x, fa(x), '-');
+legend('Forward num.', 'Analítica');
+title('Forward Difference'); grid on;
+```
+
+### 3.4 Diferencias centradas (bordes forward/backward)
+
+```matlab
+h = deltas(2);
+x = 0:h:2*pi;
+fc1 = zeros(size(x));
+% Bordes
+fc1(1)   = (f(x(2)) - f(x(1))) / h;
+fc1(end) = (f(x(end)) - f(x(end-1))) / h;
+% Interior
+for i = 2:length(x)-1
+    fc1(i) = (f(x(i+1)) - f(x(i-1))) / (2*h);
+end
+figure;
+plot(x, fc1, '.', x, fa(x), '-');
+legend('Centered (mixed)', 'Analítica');
+title('Centered Difference with boundaries'); grid on;
+```
+
+### 3.5 Diferencias centradas periódicas
+
+```matlab
+h = deltas(2);
+x = 0:h:2*pi;
+N = length(x);
+fc2 = zeros(size(x));
+for i = 1:N
+    ip = mod(i, N) + 1;
+    im = mod(i-2, N) + 1;
+    fc2(i) = (f(x(ip)) - f(x(im))) / (2*h);
+end
+figure;
+plot(x, fc2, '.', x, fa(x), '-');
+legend('Centered periodic', 'Analítica');
+title('Centered Periodic Difference'); grid on;
+```
+
+### 3.6 Segunda derivada periódica
+
+```matlab
+h = deltas(2);
+x = 0:h:2*pi;
+N = length(x);
+f2 = zeros(size(x));
+for i = 1:N
+    ip = mod(i, N) + 1;
+    im = mod(i-2, N) + 1;
+    f2(i) = (f(x(ip)) - 2*f(x(i)) + f(x(im))) / (h^2);
+end
+figure;
+plot(x, f2, '.', x, f2a(x), '-');
+legend('2nd deriv num.', '2nd deriv anal.');
+title('Second Derivative Periodic'); grid on;
+```
+
+### 3.7 Ruido blanco y repetición
+
+Añade ruido y repite los métodos anteriores cambiando `f(x)` por:
+
+```matlab
+f_noisy = @(x) sin(x) + x - 1 + 0.1*randn(size(x));
+```
+
+Recalcula diferencias y compara con la derivada analítica.
+
+---
+
+## 4. Integral
+
+> **Cheatsheet:** métodos de integración numérica
+>
+> * **Rectángulo izquierdo:**
+>
+>   $$
+>     \int_a^b f(x)dx \approx \sum_{i=1}^{N-1} f(x_i)\,\Delta x
+>   $$
+> * **Rectángulo derecho:**
+>
+>   $$
+>     \int_a^b f(x)dx \approx \sum_{i=2}^{N} f(x_i)\,\Delta x
+>   $$
+> * **Trapecio:**
+>
+>   $$
+>     \int_a^b f(x)dx \approx \frac{\Delta x}{2}\bigl(f(x_1)+2\sum_{i=2}^{N-1}f(x_i)+f(x_N)\bigr)
+>   $$
+> * **Simpson:** (N par)
+>
+>   $$
+>     \int_a^b f(x)dx \approx \frac{\Delta x}{3}\bigl(f(x_1)+4\sum_{odd}f+2\sum_{even}f+f(x_N)\bigr)
+>   $$
+> * **`quad` de MATLAB:** `val = quad(f,a,b)`.
+
+Cálculo de
+$  I = \int_0^{2\pi} (\sin(x)+x-1)\,dx = \bigl[-\cos(x) + x^2/2 - x\bigr]_0^{2\pi}$.
+
+```matlab
+f = @(x) sin(x) + x - 1;
+real_val = (-cos(2*pi) + (2*pi)^2/2 - 2*pi) - (-cos(0) + 0 - 0);
+deltas = [0.1, 0.01, 1e-4];
+for h = deltas
+    x = 0:h:2*pi;
+    N = length(x);
+    % Izquierdo
+    I_L = sum(f(x(1:end-1))) * h;
+    % Derecho
+    I_R = sum(f(x(2:end))) * h;
+    % Trapecio
+    I_T = (h/2)*(f(x(1)) + 2*sum(f(x(2:end-1))) + f(x(end)));
+    % Simpson
+    if mod(N,2)==1
+        I_S = (h/3)*(f(x(1)) + 4*sum(f(x(2:2:end-1))) + 2*sum(f(x(3:2:end-2))) + f(x(end)));
+    else
+        I_S = NaN;
+    end
+    % quad
+    I_Q = quad(f,0,2*pi);
+    fprintf('h=%.5f: Left=%.5f, Right=%.5f, Trap=%.5f, Simp=%.5f, quad=%.5f, real=%.5f, diff_L=%.5f\n',...
+        h, I_L, I_R, I_T, I_S, I_Q, real_val, I_L-real_val);
+end
+```
+
+### 4.1 Con ruido
+
+Repite las integraciones usando:
+
+```matlab
+f_noisy = @(x) sin(x) + x - 1 + 0.1*randn(size(x));
+```
+
+Compara las diferencias con y sin ruido.
 
