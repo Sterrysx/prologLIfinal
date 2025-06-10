@@ -490,3 +490,125 @@ f_noisy = @(x) sin(x) + x - 1 + 0.1*randn(size(x));
 
 Compara las diferencias con y sin ruido.
 
+
+
+## 5. Ecuaciones Diferenciales Ordinarias (EDO)
+
+> **Teoría General:** Una EDO de primer orden de la forma
+>
+> $$
+>   \frac{dN}{dt} = r\,N(t)
+> $$
+>
+> describe un crecimiento (o decaimiento) exponencial cuando \$r\$ es constante. La **solución exacta** con condición inicial \$N(0)=N\_0\$ es
+>
+> $$
+>   N(t) = N_0 e^{r t}.
+> $$
+>
+> **Métodos numéricos comunes:**
+>
+> 1. **Euler Explícito (forward Euler):**
+>
+>    $$
+>      N_{i+1} = N_i + \Delta t\,f(t_i,N_i),
+>    $$
+>
+>    preciso en orden 1: error global \$\mathcal{O}(\Delta t)\$.
+> 2. **Euler Implícito (backward Euler):**
+>
+>    $$
+>      N_{i+1} = N_i + \Delta t\,f(t_{i+1},N_{i+1}),
+>    $$
+>
+>    requiere resolver para \$N\_{i+1}\$; más estable para pasos grandes.
+> 3. **Runge–Kutta de orden 4 (RK4):** combina cuatro evaluaciones intermedias para alcanzar error de orden 4 en \$\Delta t\$.
+> 4. **Integradores adaptativos (e.g., `ode45` en MATLAB):** usan RK de orden variable y control de error.
+
+### 5.1 Derivada de Stock Price
+
+```matlab
+% 5.1(a) Carga de datos
+data = load('ElectricCarCompany.mat');
+time = data.timeStocks;
+price = data.StockPrice;
+
+% 5.1(b) Derivada numérica:
+% Centradas en interior, forward/backward en extremos
+dt = mean(diff(time));
+N = numel(price);
+price_dot = zeros(size(price));
+% Forward en inicio
+price_dot(1) = (price(2) - price(1))/dt;
+% Centradas
+for i = 2:N-1
+    price_dot(i) = (price(i+1) - price(i-1))/(2*dt);
+end
+% Backward en final
+price_dot(N) = (price(N) - price(N-1))/dt;
+
+% 5.1(c) Gráfica de la velocidad\ nfigure;
+plot(time, price_dot);
+xlabel('Time'); ylabel('d(StockPrice)/dt');
+title('Tasa de cambio del precio de acciones'); grid on;
+```
+
+### 5.2 Beneficios Acumulados
+
+```matlab
+% 5.2(a) Beneficios anuales
+time = data.timeStocks;
+profits = data.ProfitsInMillions;
+figure;
+plot(time, profits);
+xlabel('Time'); ylabel('Profits (millions)');
+title('Beneficios anuales'); grid on;
+
+% 5.2(b) Integral acumulada (trapecio)
+cum_prof = cumtrapz(time, profits);
+figure;
+plot(time, cum_prof);
+xlabel('Time'); ylabel('Cumulative profits (millions)');
+title('Beneficios acumulados'); grid on;
+
+% 5.2(c) Reflexión: analiza tendencias, picos y cambios abruptos.
+```
+
+### 5.3 Modelo Malthusiano de Crecimiento
+
+```matlab
+% 5.3 Carga de datos
+data2 = load('Malthus.mat');
+T = data2.timePopulation - data2.timePopulation(1);
+N_data = data2.population;
+N0 = N_data(1);
+r = data2.r;
+dt = mean(diff(T));
+
+% (a) Euler Explícito
+N_e = zeros(size(T)); N_e(1)=N0;
+for k=1:length(T)-1
+    N_e(k+1) = N_e(k) + dt*(r*N_e(k));
+end
+
+% (b) Euler Implícito\ N_imp = zeros(size(T)); N_imp(1)=N0;
+for k=1:length(T)-1
+    N_imp(k+1) = N_imp(k)/(1 - dt*r);
+end
+
+% (c) Runge-Kutta 4 con ode45
+odefun = @(t,N) r*N;
+[t_sol, N_sol] = ode45(odefun, [0 T(end)], N0);
+
+% Solución exacta
+N_exact = N0 * exp(r*T);
+
+% Gráfica comparativa
+figure;
+plot(T, N_data, 'o', T, N_e, '-', T, N_imp, '--', t_sol, N_sol, ':', T, N_exact, '-.');
+legend('Datos reales','Euler ext','Euler impl','ode45','Exacta');
+xlabel('Time since 1950'); ylabel('Population');
+title('Crecimiento poblacional: modelos numéricos vs datos'); grid on;
+```
+
+
